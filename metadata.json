@@ -1,0 +1,6 @@
+{
+  "name": "AutoEmpleo Argentina - Buscador & Postulador de Empleo",
+  "description": "Buscador y postulador automático de empleos en Argentina con IA Gemini, filtro para LinkedIn y guía paso a paso de despliegue para principiantes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

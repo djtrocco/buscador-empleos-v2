@@ -87,11 +87,18 @@ export const JobCard: React.FC<JobCardProps> = ({
               {portalInfo.label}
             </span>
 
-            {/* Unified Email Badge */}
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1 font-mono" title={`Email de contacto directo: ${job.contactEmail || 'Postulación por Email'}`}>
-              <Mail className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{job.contactEmail || 'Envío por Email'}</span>
-            </span>
+            {/* Email Badge (Only shown if job notice body contained a real contact email) */}
+            {job.contactEmail ? (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1 font-mono" title={`Email en cuerpo del aviso: ${job.contactEmail}`}>
+                <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{job.contactEmail}</span>
+              </span>
+            ) : (
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-slate-800/80 text-slate-300 border-slate-700/80 flex items-center gap-1" title="Aviso sin correo en cuerpo; postulación mediante sitio web o portal">
+                <Globe className="w-3.5 h-3.5 text-sky-400" />
+                <span>Postulación Web</span>
+              </span>
+            )}
 
             <span className="text-xs bg-slate-950/80 text-slate-300 px-2.5 py-1 rounded-full border border-slate-800 font-medium capitalize">
               {job.modality}

@@ -105,8 +105,13 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700/80 px-3 py-1.5 rounded-lg text-sky-200 font-mono text-xs focus:outline-none focus:border-sky-500"
-                placeholder="email@empresa.com.ar"
+                placeholder="Ingresa correo si figura en el aviso..."
               />
+              {!job.contactEmail && (
+                <p className="text-[10px] text-amber-400/90 mt-1">
+                  * Este aviso no publicó un email en su cuerpo. Puedes ingresarlo manualmente o usar la opción "Ver Publicación Web ↗".
+                </p>
+              )}
             </div>
           </div>
 

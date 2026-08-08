@@ -282,6 +282,31 @@ function matchesLocationFilter(jobLocation: string, filterLocation: string): boo
     return loc.includes('remoto');
   }
   return loc.includes(filt);
+}function buildPortalSearchUrl(portal: string, query: string): string {
+  const cleanQ = (query || '').trim();
+  const slug = cleanQ
+    ? cleanQ.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    : 'empleos';
+  const encodedQ = encodeURIComponent(cleanQ || 'empleos');
+  const p = (portal || '').toLowerCase();
+
+  if (p === 'bumeran') {
+    return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
+  }
+  if (p === 'zonajobs') {
+    return slug ? `https://www.zonajobs.com.ar/empleos-busqueda-${slug}.html` : 'https://www.zonajobs.com.ar/empleos.html';
+  }
+  if (p === 'computrabajo') {
+    return slug ? `https://ar.computrabajo.com/trabajo-de-${slug}` : 'https://ar.computrabajo.com/';
+  }
+  if (p === 'linkedin') {
+    return `https://www.linkedin.com/jobs/search/?keywords=${encodedQ}&location=Argentina`;
+  }
+  if (p === 'indeed') {
+    return `https://ar.indeed.com/jobs?q=${encodedQ}&l=Argentina`;
+  }
+
+  return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
 }
 
 function generateDynamicServerJobs(
@@ -334,8 +359,7 @@ function generateDynamicServerJobs(
     }
 
     const company = sampleCompanies[i % sampleCompanies.length];
-    const cleanCompany = company.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-    const contactEmail = `rrhh@${cleanCompany || 'empresa'}.com.ar`;
+    const searchUrl = buildPortalSearchUrl(pPortal, cleanQ || capitalizedRole);
 
     generated.push({
       id: `dyn-job-${Date.now()}-${i}`,
@@ -345,7 +369,7 @@ function generateDynamicServerJobs(
       portal: pPortal,
       modality: pModality,
       salaryRange: `$${(1200 + i * 150).toLocaleString('es-AR')}.000 - $${(1700 + i * 200).toLocaleString('es-AR')}.000 ARS/mes`,
-      description: `Búsqueda activa en ${company} para el puesto de ${capitalizedRole} en ${pLoc}. Excelente ambiente de trabajo, remuneración competitiva y plan de carrera.`,
+      description: `Búsqueda activa en ${company} para el puesto de ${capitalizedRole} en ${pLoc}. Excelente ambiente de trabajo, remuneración competitiva y plan de carrera. Postulación directa a través del portal laboral ${pPortal}.`,
       requirements: [
         `Experiencia comprobable o conocimientos sólidos en ${capitalizedRole}`,
         'Proactividad y trabajo en equipo',
@@ -353,8 +377,8 @@ function generateDynamicServerJobs(
         'Disponibilidad inmediata'
       ],
       postedDate: `Hace ${i * 2} horas`,
-      url: `https://www.bumeran.com.ar/empleos/${cleanCompany}-${i}.html`,
-      contactEmail,
+      url: searchUrl,
+      contactEmail: undefined,
       matchScore: Math.min(98, 85 + (i % 10)),
       matchAnalysis: {
         matchingSkills: [`Experiencia en ${capitalizedRole}`, 'Trabajo en equipo'],
@@ -378,49 +402,45 @@ app.post('/api/jobs/search', async (req, res) => {
 
     if (ai) {
       try {
-        const prompt = `Actúa como un motor de búsqueda laboral en tiempo real para Argentina que consulta ofertas en internet y portales de trabajo (ZonaJobs, Bumeran Argentina, Computrabajo Argentina, LinkedIn Argentina, Indeed Argentina).
+        const prompt = `Actúa como un motor de búsqueda laboral en tiempo real para Argentina que consulta ofertas en los motores de búsqueda de portales de trabajo (Bumeran, ZonaJobs, Computrabajo, LinkedIn, Indeed).
 
-CRITERIOS Y FILTROS APLICADOS POR EL USUARIO:
-- Término o Área de Búsqueda: "${query || 'Todos los empleos'}"
+CRITERIOS Y PALABRA CLAVE DE BÚSQUEDA APLICADA:
+- Palabra clave / Término de Búsqueda: "${query || 'Todos los empleos'}"
 - Ubicación Requerida: "${location}"
 - Portal de Trabajo: "${portal}"
 - Modalidad Laboral: "${modality}"
 
-INSTRUCCIONES CLAVE DE AMPLITUD Y ESPECIFICACIÓN DE URLS EN INTERNET:
-1. MÁXIMA AMPLITUD SEMÁNTICA (NO LIMITAR A LA PALABRA LITERAL):
-   - Realiza una búsqueda amplia en internet para el área profesional o rubro indicado por "${query}".
-   - Devuelve posiciones afines, especialidades relacionadas, cargos equivalentes y puestos con funciones parecidas en Argentina.
-   - Ejemplo: Para "comercio exterior", incluye analista comex, despachante de aduana, compras internacionales, logística de cargas, asistente de comercio internacional, operador logístico.
-   - Ejemplo: Para "programador", incluye desarrollador frontend, backend, fullstack, analista funcional, QA, ingeniero de software, soporte dev.
-   - Ejemplo: Para "mantenimiento", incluye técnico electromecánico, oficial de mantenimiento, supervisor técnico, servicios generales, oficial técnico.
-   - Ejemplo: Para "ventas", incluye ejecutivo de cuentas, asesor comercial, vendedor de salón, telemarketer, gestor de ventas.
+INSTRUCCIONES CLAVE DE INSERCIÓN EN MOTORES DE BÚSQUEDA Y EXTRACCIÓN DE CORREOS:
+1. BÚSQUEDA EN MOTORES Y AMPLITUD DE PUESTOS CON LA PALABRA CLAVE:
+   - Consulta los motores de búsqueda de empleos con el término "${query}".
+   - Devuelve posiciones directas y especialidades afines asociadas a dicha palabra clave en Argentina.
+   - Para cada oferta, genera o incluye la URL del motor de búsqueda del portal correspondiente incorporando la palabra clave (ej: "https://www.bumeran.com.ar/empleos-busqueda-${encodeURIComponent(query)}.html", "https://ar.computrabajo.com/trabajo-de-${encodeURIComponent(query)}", "https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}").
 
-2. ESPECIFICACIÓN OBLIGATORIA DE ENLACE WEB (URL) VERIFICABLE:
-   - CADA oferta laboral DEBE especificar la URL web directa y completa del puesto de trabajo en el portal ("url") para que el usuario pueda ingresar y chequear la oferta original en internet (ejemplos de estructura: "https://www.bumeran.com.ar/empleos/...", "https://www.zonajobs.com.ar/empleos/...", "https://ar.computrabajo.com/ofertas-de-trabajo/...", "https://www.linkedin.com/jobs/view/...", "https://ar.indeed.com/viewjob?jk=...").
+2. CORREO ELECTRÓNICO (REGLA ESTRICTA DE NO INVENTAR NINGÚN EMAIL):
+   - Extrae el campo "contactEmail" ÚNICAMENTE SI la oferta de empleo extraída de internet o del cuerpo del aviso contiene o indica explícitamente una dirección de correo electrónico válida para enviar el CV.
+   - SI EL AVISO NO CONTIENE UN CORREO DENTRO DEL CUERPO DE LA PUBLICACIÓN O ES POSTULACIÓN VÍA FORMULARIO DEL PORTAL, DEJA EL CAMPO "contactEmail" NULO (null o undefined).
+   - ¡ESTÁ ESTRICTAMENTE PROHIBIDO INVENTAR O FABRICAR EMAILS FALSOS! Si no hay un email real en la publicación, no incluyas ningún correo.
 
 3. RESPETO ESTRICTO DE FILTROS:
-   - Ubicación: Si el filtro de ubicación NO es "todas" o "Argentina", TODOS los empleos deben corresponder a "${location}" (o modalidad remota para esa región).
+   - Ubicación: Si el filtro de ubicación NO es "todas" o "Argentina", los empleos deben corresponder a "${location}" (o modalidad remota para esa región).
    - Portal: Si el filtro de portal NO es "todos", el campo "portal" DEBE ser exactamente "${portal}".
    - Modalidad: Si el filtro de modalidad NO es "todos" o "todas", el campo "modality" DEBE ser exactamente "${modality}".
 
-4. CORREO ELECTRÓNICO DE CONTACTO DIRECTO:
-   - CADA oferta DEBE incluir obligatoriamente una dirección de correo válida para envío de CV (campo "contactEmail", ej: "rrhh@empresa.com.ar" o "busquedas@empresa.com.ar").
-
-Genera entre 15 y 25 ofertas de empleo hiperrealistas en el mercado laboral argentino actual.
+Genera entre 15 y 25 ofertas de empleo hiperrealistas basadas en búsquedas activas en Argentina.
 
 Devuelve un JSON estrictamente estructurado como un array de objetos con las propiedades:
-- id: string único (ej: "job-web-1")
+- id: string único
 - title: título del puesto
 - company: nombre de la empresa
 - location: ciudad / provincia en Argentina
 - portal: uno de ["zonajobs", "bumeran", "computrabajo", "linkedin", "indeed"]
 - modality: uno de ["remoto", "presencial", "hibrido"]
 - salaryRange: estimación salarial en ARS o USD
-- description: descripción clara de tareas y perfil buscado
-- requirements: array de 3 a 5 requisitos clave
-- postedDate: fecha de publicación (ej: "Hace 2 horas")
-- url: URL web directa y completa para verificar la existencia de la oferta en internet
-- contactEmail: dirección de email obligatoria para envío de CV
+- description: descripción clara del puesto
+- requirements: array de 3 a 5 requisitos
+- postedDate: fecha relativa (ej: "Hace 2 horas")
+- url: URL del motor de búsqueda o enlace web directo de la publicación conteniendo la palabra clave
+- contactEmail: correo electrónico SOLAMENTE SI figura explícitamente en el cuerpo del aviso, de lo contrario null
 
 Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marcas de markdown.`;
 
@@ -465,12 +485,23 @@ Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marca
       searchResults = generateDynamicServerJobs(query || 'Empleo General', 15, location, portal, modality);
     }
 
-    // Process and guarantee emails & clean URLs for every result
+    // Process and validate results: STRICTLY DO NOT INVENT EMAILS
     searchResults = searchResults.map((job, idx) => {
-      let email = job.contactEmail ? String(job.contactEmail).trim() : '';
-      if (!email || !email.includes('@')) {
-        const cleanCompany = (job.company || 'empresa').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-        email = `rrhh@${cleanCompany || 'empresa'}.com.ar`;
+      let email: string | undefined = undefined;
+      const rawEmail = job.contactEmail ? String(job.contactEmail).trim() : '';
+      
+      // Only keep real, non-invented emails
+      if (rawEmail && rawEmail.includes('@') && !rawEmail.includes('empresa.com.ar') && !rawEmail.includes('ejemplo.com') && !rawEmail.includes('rrhh@empresa')) {
+        email = rawEmail;
+      } else {
+        // Search if description contains an actual email in notice body
+        const desc = job.description || '';
+        const match = desc.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (match && !match[0].includes('ejemplo') && !match[0].includes('empresa.com')) {
+          email = match[0];
+        } else {
+          email = undefined; // DO NOT INVENT AN EMAIL!
+        }
       }
 
       let portalName = (job.portal || portal || 'bumeran').toLowerCase();
@@ -479,13 +510,8 @@ Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marca
       }
 
       let jobUrl = job.url ? String(job.url).trim() : '';
-      if (!jobUrl || !jobUrl.startsWith('http')) {
-        const cleanTitle = (job.title || 'empleo').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-');
-        if (portalName === 'bumeran') jobUrl = `https://www.bumeran.com.ar/empleos/${cleanTitle}-${idx + 1}00.html`;
-        else if (portalName === 'zonajobs') jobUrl = `https://www.zonajobs.com.ar/empleos/${cleanTitle}-${idx + 1}00.html`;
-        else if (portalName === 'computrabajo') jobUrl = `https://ar.computrabajo.com/ofertas-de-trabajo/${cleanTitle}-${idx + 1}`;
-        else if (portalName === 'linkedin') jobUrl = `https://www.linkedin.com/jobs/view/${3900000000 + idx}`;
-        else jobUrl = `https://ar.indeed.com/viewjob?jk=job${idx + 1}00`;
+      if (!jobUrl || !jobUrl.startsWith('http') || jobUrl.includes('ejemplo')) {
+        jobUrl = buildPortalSearchUrl(portalName, query || job.title || 'empleos');
       }
 
       return {

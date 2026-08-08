@@ -137,6 +137,22 @@ function matchesLocationFilter(jobLocation: string, filterLocation: string): boo
 }
 
 // Generate dynamic Argentine job offers for any query when static dataset doesn't have enough matches
+function getLocalPortalSearchUrl(portal: string, query: string): string {
+  const cleanQ = (query || '').trim();
+  const slug = cleanQ
+    ? cleanQ.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    : 'empleos';
+  const encodedQ = encodeURIComponent(cleanQ || 'empleos');
+  const p = (portal || '').toLowerCase();
+
+  if (p === 'bumeran') return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
+  if (p === 'zonajobs') return slug ? `https://www.zonajobs.com.ar/empleos-busqueda-${slug}.html` : 'https://www.zonajobs.com.ar/empleos.html';
+  if (p === 'computrabajo') return slug ? `https://ar.computrabajo.com/trabajo-de-${slug}` : 'https://ar.computrabajo.com/';
+  if (p === 'linkedin') return `https://www.linkedin.com/jobs/search/?keywords=${encodedQ}&location=Argentina`;
+  if (p === 'indeed') return `https://ar.indeed.com/jobs?q=${encodedQ}&l=Argentina`;
+  return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
+}
+
 function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 'todas', portal = 'todos', modality = 'todas'): JobOffer[] {
   const cleanQ = query.trim();
   const capitalizedRole = cleanQ ? cleanQ.charAt(0).toUpperCase() + cleanQ.slice(1) : 'Especialista General';
@@ -181,8 +197,7 @@ function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 
     }
 
     const company = sampleCompanies[i % sampleCompanies.length];
-    const cleanCompany = normalizeText(company).replace(/[^a-z0-9]/g, '');
-    const contactEmail = `rrhh@${cleanCompany || 'empresa'}.com.ar`;
+    const searchUrl = getLocalPortalSearchUrl(pPortal, cleanQ || capitalizedRole);
 
     generated.push({
       id: `dyn-${Date.now()}-${i}`,
@@ -192,7 +207,7 @@ function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 
       portal: pPortal,
       modality: pModality,
       salaryRange: `$${(1200 + i * 150).toLocaleString('es-AR')}.000 - $${(1600 + i * 200).toLocaleString('es-AR')}.000 ARS/mes`,
-      description: `Importante empresa (${company}) se encuentra en la búsqueda activa de ${capitalizedRole} para sumarse a su equipo en ${pLoc}. Se ofrece excelente clima laboral, remuneración acorde y posibilidades de desarrollo profesional.`,
+      description: `Importante empresa (${company}) se encuentra en la búsqueda activa de ${capitalizedRole} para sumarse a su equipo en ${pLoc}. Postulación directa en el portal ${pPortal}.`,
       requirements: [
         `Experiencia comprobable o conocimientos sólidos en ${capitalizedRole}`,
         'Proactividad y capacidad de trabajo en equipo',
@@ -200,8 +215,8 @@ function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 
         'Disponibilidad inmediata'
       ],
       postedDate: `Hace ${i * 2} horas`,
-      url: `https://www.bumeran.com.ar/empleos/${normalizeText(capitalizedRole).replace(/\s+/g, '-')}-${i}00.html`,
-      contactEmail,
+      url: searchUrl,
+      contactEmail: undefined,
       matchScore: Math.min(98, 88 + (i % 8)),
       matchAnalysis: {
         matchingSkills: [`Conocimientos en ${capitalizedRole}`, 'Trabajo en equipo', 'Compromiso laboral'],

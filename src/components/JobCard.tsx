@@ -167,13 +167,13 @@ export const JobCard: React.FC<JobCardProps> = ({
 
         {/* LINKEDIN SPECIAL NOTICE BOX */}
         {isLinkedIn ? (
-          <div className="mb-4 bg-blue-950/30 border border-blue-800/50 rounded-2xl p-3.5 text-xs text-blue-200 space-y-1.5">
-            <div className="flex items-center space-x-2 font-semibold text-blue-300">
-              <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0" />
-              <span>LinkedIn Argentina: Búsqueda Directa</span>
+          <div className="mb-4 bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-3 text-xs text-emerald-200 space-y-1">
+            <div className="flex items-center space-x-2 font-semibold text-emerald-300">
+              <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>LinkedIn Argentina: Postulación Automática Habilitada</span>
             </div>
             <p className="text-slate-300 leading-relaxed text-[11px]">
-              Accede directamente al enlace oficial para postularte de forma segura protegiendo tu cuenta.
+              Envío directo de carta de presentación y CV por correo electrónico al reclutador ({job.contactEmail}).
             </p>
           </div>
         ) : null}

@@ -48,6 +48,7 @@ export const INITIAL_MOCK_JOBS: JobOffer[] = [
     requirements: ['Node.js', 'React', 'Inglés B2/C1', 'Arquitectura de Software'],
     postedDate: 'Hace 1 día',
     url: 'https://www.linkedin.com/jobs/view/3998123456/',
+    contactEmail: 'talent.arg@globant.com',
     matchScore: 88
   },
   {
@@ -107,6 +108,7 @@ export const INITIAL_MOCK_JOBS: JobOffer[] = [
     requirements: ['Figma', 'User Research', 'Design Systems', 'Prototipado interactivo'],
     postedDate: 'Ayer',
     url: 'https://www.linkedin.com/jobs/view/3991122334/',
+    contactEmail: 'empleos@uala.com.ar',
     matchScore: 85
   },
   {
@@ -196,6 +198,7 @@ export const INITIAL_MOCK_JOBS: JobOffer[] = [
     requirements: ['Lic. en Psicología o Recursos Humanos', 'Estrategias de Sourcing en LinkedIn', 'Inglés intermedio'],
     postedDate: 'Hace 4 horas',
     url: 'https://www.linkedin.com/jobs/view/3995544332/',
+    contactEmail: 'seleccion@randstad.com.ar',
     matchScore: 87
   },
   {
@@ -225,6 +228,7 @@ export const INITIAL_MOCK_JOBS: JobOffer[] = [
     requirements: ['Python 3+', 'Django / FastAPI', 'PostgreSQL', 'Docker / AWS', 'Git'],
     postedDate: 'Hace 1 día',
     url: 'https://www.linkedin.com/jobs/view/3997788990/',
+    contactEmail: 'jobs@despegar.com',
     matchScore: 90
   },
   {
@@ -284,6 +288,7 @@ export const INITIAL_MOCK_JOBS: JobOffer[] = [
     requirements: ['Cypress / Selenium / Playwright', 'JavaScript or Python', 'Postman / API Testing', 'Git'],
     postedDate: 'Hace 1 día',
     url: 'https://www.linkedin.com/jobs/view/3994455667/',
+    contactEmail: 'empleos@naranjax.com.ar',
     matchScore: 89
   },
   {
@@ -388,6 +393,67 @@ export const INITIAL_MOCK_JOBS: JobOffer[] = [
     requirements: ['C# / .NET Core', 'SQL Server (Stored Procedures)', 'Entity Framework', 'Git'],
     postedDate: 'Hace 2 días',
     url: 'https://www.linkedin.com/jobs/view/3990011223/',
+    contactEmail: 'rrhh@sistemasquilmes.com.ar',
     matchScore: 88
+  },
+  {
+    id: 'job-27',
+    title: 'Analista de Compras y Solicitud de Proveedores',
+    company: 'Grupo Industrial Pampeano',
+    location: 'Santa Fe Capital',
+    portal: 'zonajobs',
+    modality: 'presencial',
+    salaryRange: '$1.600.000 - $2.000.000 ARS/mes',
+    description: 'Emisión de órdenes de compra, negociación de precios y plazos con proveedores, seguimiento de entregas e insumos industriales.',
+    requirements: ['Experiencia en gestión de compras', 'Negociación comercial', 'Manejo de ERP / Excel'],
+    postedDate: 'Hace 5 horas',
+    url: 'https://www.zonajobs.com.ar/empleos/analista-compras-santa-fe-882211.html',
+    contactEmail: 'compras@industrialpampeano.com.ar',
+    matchScore: 85
+  },
+  {
+    id: 'job-28',
+    title: 'Profesor/a de Inglés Corporativo y Clases Online',
+    company: 'Instituto Lenguas del Sur',
+    location: 'Remoto Argentina',
+    portal: 'indeed',
+    modality: 'remoto',
+    salaryRange: '$1.200.000 - $1.600.000 ARS/mes',
+    description: 'Dictado de clases grupales e individuales de Business English para profesionales de empresas tecnológicas y ejecutivos.',
+    requirements: ['Profesorado de Inglés o certificado TEFL / CELTA', 'Experiencia en docencia online', 'Inglés nativo o C2'],
+    postedDate: 'Ayer',
+    url: 'https://ar.indeed.com/viewjob?jk=9988776655',
+    contactEmail: 'empleos@lenguasdelsur.com.ar',
+    matchScore: 82
+  },
+  {
+    id: 'job-29',
+    title: 'Asistente de Recursos Humanos y Control de Presentismo',
+    company: 'Servicios Logísticos San Martín',
+    location: 'Buenos Aires, Zona Norte (San Martín)',
+    portal: 'bumeran',
+    modality: 'presencial',
+    salaryRange: '$1.250.000 - $1.550.000 ARS/mes',
+    description: 'Control de fichadas de personal, archivo de legajos, administración de licencias médicas, indumentaria y apoyo al área de liquidación.',
+    requirements: ['Estudiante de RRHH o Administración', 'Manejo de sistemas de fichada', 'Excel intermedio'],
+    postedDate: 'Hace 3 horas',
+    url: 'https://www.bumeran.com.ar/empleos/asistente-rrhh-san-martin-776655.html',
+    contactEmail: 'rrhh@logisticasanmartin.com.ar',
+    matchScore: 87
+  },
+  {
+    id: 'job-30',
+    title: 'Supervisora / Encargada de Local de Comercio',
+    company: 'Cadena de Calzado & Moda',
+    location: 'Tucumán Capital',
+    portal: 'computrabajo',
+    modality: 'presencial',
+    salaryRange: '$1.300.000 + Premio por Objetivos ARS/mes',
+    description: 'Liderazgo de equipo de vendedores, control de caja diaria, reposición de stock, visual merchandising y cumplimiento de metas comerciales.',
+    requirements: ['Experiencia previa en manejo de personal en retail', 'Liderazgo', 'Disponibilidad horaria comercial'],
+    postedDate: 'Hace 1 hora',
+    url: 'https://ar.computrabajo.com/ofertas-de-trabajo/encargada-local-tucuman',
+    contactEmail: 'busquedas@cadena-moda.com.ar',
+    matchScore: 89
   }
 ];

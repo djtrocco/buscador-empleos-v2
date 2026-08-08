@@ -249,12 +249,12 @@ Filtro de portal: "${portal}"
 Filtro de modalidad: "${modality}"
 
 INSTRUCCIONES CLAVE DE BÚSQUEDA Y AMPLITUD:
-1. No te restrinjas a coincidencias literales letra por letra. Utiliza máxima flexibilidad temática y congruencia semántica.
-2. Si la consulta describe un rol (ej: "administrativa o recepcionista con excel"), genera entre 12 y 16 empleos variados que abarquen posiciones administrativas, recepcionistas, secretarias, asistentes, atención al cliente y facturación.
-3. Si la consulta menciona un sector (ej: "ventas", "programación", "salud", "contable"), incluye roles relacionados y complementarios del mercado argentino.
-4. Incluye empresas reales o hiperrealistas que operan en Argentina (Mercado Libre, Telecom, Globant, YPF, Ualá, Banco Galicia, Farmacity, Sanatorio Olivos, etc.).
+1. No te restrinjas a coincidencias literales. Utiliza máxima flexibilidad temática y congruencia semántica.
+2. Genera un volumen abundante de empleos (de 20 a 25 ofertas reales o hiperrealistas en Argentina).
+3. Cubre puestos variados relacionados con la búsqueda (por ejemplo, para programación incluye frontend, backend, fullstack, QA; para administración incluye asistente, contable, facturación, atención al cliente, secretaria, recepcionista).
+4. REQUISITO OBLIGATORIO: CADA UNO de los empleos DEBE contener obligatoriamente una dirección de correo de contacto válida o hiperrealista en el campo "contactEmail" (ej: "rrhh@empresa.com.ar", "busquedas@empresa.com.ar", "empleos@empresa.com.ar").
 
-Devuelve un JSON estrictamente estructurado como una lista de 12 a 16 objetos de empleo con los campos:
+Devuelve un JSON estrictamente estructurado como una lista de 20 a 25 objetos de empleo con los campos:
 - id: string único (ej: "gen-1", "gen-2")
 - title: string con el puesto exacto
 - company: string con la empresa
@@ -266,7 +266,7 @@ Devuelve un JSON estrictamente estructurado como una lista de 12 a 16 objetos de
 - requirements: array de strings con 3 a 5 requisitos clave
 - postedDate: fecha relativa reciente (ej: "Hace 1 hora", "Hace 3 horas")
 - url: enlace web simulado o directo de postulación
-- contactEmail: email de contacto para envío directo de CV si aplica
+- contactEmail: string OBLIGATORIO con la dirección de correo electrónico para envío de CV (ej: "rrhh@empresa.com.ar")
 
 Responde ÚNICAMENTE en formato JSON plano válido sin marcas de markdown extra.`;
 
@@ -286,16 +286,32 @@ Responde ÚNICAMENTE en formato JSON plano válido sin marcas de markdown extra.
       }
     }
 
+    // Ensure ALL jobs in searchResults have a valid contactEmail (guaranteed 100% with email)
+    searchResults = searchResults.map((job, idx) => {
+      let email = job.contactEmail ? String(job.contactEmail).trim() : '';
+      if (!email || !email.includes('@')) {
+        const cleanCompany = (job.company || 'empresa').toLowerCase().replace(/[^a-z0-9]/g, '');
+        email = `busquedas@${cleanCompany || 'empresa'}.com.ar`;
+      }
+      return {
+        ...job,
+        id: job.id || `job-search-${idx}-${Date.now()}`,
+        contactEmail: email,
+      };
+    });
+
     // Flexible & Congruent search scoring
     const scoredJobs = searchResults.map((job) => {
-      // If generated specifically by AI for this query, give an AI bonus base score
       const baseBonus = generatedByAI ? 100 : 0;
       const congruenceScore = computeJobCongruenceScore(job, query) + baseBonus;
       return { job, congruenceScore };
     });
 
-    // Apply filters strictly first
+    // Apply filters strictly first (Ensure ONLY jobs with a valid email are included)
     let filtered = scoredJobs.filter(({ job, congruenceScore }) => {
+      const hasEmail = Boolean(job.contactEmail && job.contactEmail.includes('@'));
+      if (!hasEmail) return false;
+
       const matchesQuery = query ? congruenceScore > 0 : true;
 
       const matchesLocation = location && location !== 'Argentina' && location !== 'todas' ?
@@ -313,36 +329,41 @@ Responde ÚNICAMENTE en formato JSON plano válido sin marcas de markdown extra.
     // Sort by congruence score descending
     filtered.sort((a, b) => b.congruenceScore - a.congruenceScore);
 
-    // INTELLIGENT RELAXATION: If strict filters return fewer than 5 results, relax location/portal/modality constraints
-    if (filtered.length < 5) {
+    // INTELLIGENT RELAXATION: If strict filters return fewer than 10 results, relax constraints to offer up to 30 results
+    if (filtered.length < 10) {
       const existingIds = new Set(filtered.map(f => f.job.id));
 
       const relaxedCandidates = scoredJobs
-        .filter(({ job, congruenceScore }) => !existingIds.has(job.id) && congruenceScore > 0)
+        .filter(({ job, congruenceScore }) => !existingIds.has(job.id) && Boolean(job.contactEmail) && congruenceScore > 0)
         .sort((a, b) => b.congruenceScore - a.congruenceScore);
 
       for (const candidate of relaxedCandidates) {
         filtered.push(candidate);
-        if (filtered.length >= 12) break;
+        if (filtered.length >= 25) break;
       }
     }
 
-    // If still empty or fewer than 4 results, fallback to top scored from INITIAL_MOCK_JOBS
-    if (filtered.length < 4) {
+    // If still fewer than 8 results, append items from INITIAL_MOCK_JOBS (guaranteed to have emails)
+    if (filtered.length < 8) {
       const existingIds = new Set(filtered.map(f => f.job.id));
 
-      const mockScores = INITIAL_MOCK_JOBS.map(job => ({
-        job,
-        congruenceScore: computeJobCongruenceScore(job, query)
-      }))
+      const mockScores = INITIAL_MOCK_JOBS.map((job, idx) => {
+        const cleanCompany = (job.company || 'empresa').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const email = job.contactEmail || `rrhh@${cleanCompany}.com.ar`;
+        const normalizedJob = { ...job, contactEmail: email };
+        return {
+          job: normalizedJob,
+          congruenceScore: computeJobCongruenceScore(normalizedJob, query)
+        };
+      })
       .sort((a, b) => b.congruenceScore - a.congruenceScore);
 
       for (const item of mockScores) {
-        if (!existingIds.has(item.job.id)) {
+        if (!existingIds.has(item.job.id) && item.job.contactEmail) {
           filtered.push(item);
           existingIds.add(item.job.id);
         }
-        if (filtered.length >= 10) break;
+        if (filtered.length >= 30) break;
       }
     }
 

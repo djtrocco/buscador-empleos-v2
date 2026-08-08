@@ -98,7 +98,7 @@ export const JobSearchFilters: React.FC<JobSearchFiltersProps> = ({
             <option value="zonajobs">ZonaJobs</option>
             <option value="bumeran">Bumeran Argentina</option>
             <option value="computrabajo">CompuTrabajo Argentina</option>
-            <option value="linkedin">LinkedIn (Solo Búsqueda)</option>
+            <option value="linkedin">LinkedIn Argentina</option>
             <option value="indeed">Indeed Argentina</option>
           </select>
         </div>

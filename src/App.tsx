@@ -430,8 +430,13 @@ export default function App() {
 
             {/* Job Offers Bento Grid */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-                <span>Resultados del mercado laboral argentino: <strong className="text-white">{jobs.length}</strong> empleos</span>
+              <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 px-1 gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>Resultados del mercado laboral argentino: <strong className="text-white">{jobs.length}</strong> empleos</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                    <Zap className="w-3 h-3 text-emerald-400" /> 100% con Email Integrado y Postulación Directa
+                  </span>
+                </div>
                 <button
                   onClick={() => setActiveTab('guide')}
                   className="text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition"

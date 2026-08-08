@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserCVProfile } from '../types';
 import { User, Mail, Phone, MapPin, Award, DollarSign, Sparkles, CheckCircle2, FileText, Upload, FileUp, Check, AlertCircle } from 'lucide-react';
 
@@ -14,6 +14,10 @@ export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveP
   const [isUploading, setIsUploading] = useState(false);
   const [newSkill, setNewSkill] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setFormData(profile);
+  }, [profile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -80,13 +84,10 @@ export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveP
         const result = event.target?.result;
 
         if (typeof result === 'string') {
-          // Plain text / Markdown / HTML / RTF
           textContent = result;
         } else if (result instanceof ArrayBuffer) {
-          // Binary (PDF/Word/etc.) -> Extract readable text strings
           const decoder = new TextDecoder('utf-8', { fatal: false });
           const rawStr = decoder.decode(result);
-          // Clean non-printable bytes
           textContent = rawStr.replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
@@ -96,12 +97,10 @@ export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveP
           throw new Error('No se pudo extraer texto legible del archivo.');
         }
 
-        // Try extracting information
         const foundEmail = extractEmail(textContent) || formData.email;
         const foundPhone = extractPhone(textContent) || formData.phone;
         const updatedSkills = extractSkills(textContent, formData.skills);
 
-        // Try guessing title or name from first lines
         const lines = textContent.split('\n').map(l => l.trim()).filter(Boolean);
         let guessedName = formData.fullName;
         let guessedTitle = formData.title;
@@ -119,13 +118,18 @@ export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveP
           email: foundEmail,
           phone: foundPhone,
           skills: updatedSkills,
-          cvText: textContent.length > 3000 ? textContent.slice(0, 3000) + '\n\n[CV Importado completo]' : textContent,
+          cvText: textContent.length > 4000 ? textContent.slice(0, 4000) + '\n\n[CV Importado completo]' : textContent,
+          cvFileName: file.name,
           title: guessedTitle || formData.title || 'Profesional / Técnico',
           summary: formData.summary || `CV cargado desde archivo "${file.name}". Se detectaron ${updatedSkills.length} habilidades.`
         };
 
         setFormData(updatedProfile);
-        setUploadNotice(`¡CV "${file.name}" subido e importado con éxito! Se actualizaron tus campos y habilidades.`);
+        // Automáticamente guardar en localStorage y estado global
+        onSaveProfile(updatedProfile);
+        setSavedSuccess(true);
+        setUploadNotice(`¡CV "${file.name}" subido e importado con éxito! Se guardó automáticamente en tu perfil.`);
+        setTimeout(() => setSavedSuccess(false), 4000);
       } catch (err: any) {
         setUploadNotice(`Error al leer archivo: ${err?.message || 'Asegúrate de subir un archivo con texto legible'}`);
       } finally {
@@ -138,11 +142,10 @@ export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveP
       setIsUploading(false);
     };
 
-    // Read as Text for txt/md/rtf or as ArrayBuffer for binary
     if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
       reader.readAsText(file);
     } else {
-      reader.readAsText(file); // Default string read with UTF-8 fallback
+      reader.readAsText(file);
     }
   };
 
@@ -229,6 +232,12 @@ JavaScript, TypeScript, React, HTML5, CSS3, Tailwind CSS, Node.js, Express, Post
               <p className="text-xs text-slate-300">
                 Sube tu CV en formato <strong>PDF, Word (.docx), TXT o Markdown</strong>. Extraeremos automáticamente tu texto, email, teléfono y habilidades.
               </p>
+              {formData.cvFileName && (
+                <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs px-2.5 py-1 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Archivo guardado: <strong>{formData.cvFileName}</strong></span>
+                </div>
+              )}
             </div>
           </div>
 

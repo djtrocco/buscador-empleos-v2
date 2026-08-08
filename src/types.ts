@@ -37,6 +37,7 @@ export interface UserCVProfile {
   skills: string[];
   salaryExpectation: string;
   cvText: string;
+  cvFileName?: string;
 }
 
 export interface ApplicationLog {

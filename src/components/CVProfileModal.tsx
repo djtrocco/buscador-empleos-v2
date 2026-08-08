@@ -8,6 +8,7 @@ interface CVProfileModalProps {
 }
 
 export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveProfile }) => {
+  const [autoExtractFields, setAutoExtractFields] = useState(false);
   const [formData, setFormData] = useState<UserCVProfile>(profile);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
@@ -97,38 +98,50 @@ export const CVProfileModal: React.FC<CVProfileModalProps> = ({ profile, onSaveP
           throw new Error('No se pudo extraer texto legible del archivo.');
         }
 
-        const foundEmail = extractEmail(textContent) || formData.email;
-        const foundPhone = extractPhone(textContent) || formData.phone;
-        const updatedSkills = extractSkills(textContent, formData.skills);
+        let updatedProfile: UserCVProfile;
 
-        const lines = textContent.split('\n').map(l => l.trim()).filter(Boolean);
-        let guessedName = formData.fullName;
-        let guessedTitle = formData.title;
+        if (autoExtractFields) {
+          const foundEmail = extractEmail(textContent) || formData.email;
+          const foundPhone = extractPhone(textContent) || formData.phone;
+          const updatedSkills = extractSkills(textContent, formData.skills);
 
-        if (lines.length > 0) {
-          const firstLine = lines[0].replace(/currículum|curriculum|vitae|cv/gi, '').trim();
-          if (firstLine.length > 3 && firstLine.length < 50 && !guessedName) {
-            guessedName = firstLine;
+          const lines = textContent.split('\n').map(l => l.trim()).filter(Boolean);
+          let guessedName = formData.fullName;
+          let guessedTitle = formData.title;
+
+          if (lines.length > 0) {
+            const firstLine = lines[0].replace(/currículum|curriculum|vitae|cv/gi, '').trim();
+            if (firstLine.length > 3 && firstLine.length < 50 && !guessedName) {
+              guessedName = firstLine;
+            }
           }
-        }
 
-        const updatedProfile: UserCVProfile = {
-          ...formData,
-          fullName: guessedName || formData.fullName,
-          email: foundEmail,
-          phone: foundPhone,
-          skills: updatedSkills,
-          cvText: textContent.length > 4000 ? textContent.slice(0, 4000) + '\n\n[CV Importado completo]' : textContent,
-          cvFileName: file.name,
-          title: guessedTitle || formData.title || 'Profesional / Técnico',
-          summary: formData.summary || `CV cargado desde archivo "${file.name}". Se detectaron ${updatedSkills.length} habilidades.`
-        };
+          updatedProfile = {
+            ...formData,
+            fullName: guessedName || formData.fullName,
+            email: foundEmail,
+            phone: foundPhone,
+            skills: updatedSkills,
+            cvText: textContent,
+            cvFileName: file.name,
+            title: guessedTitle || formData.title || 'Profesional / Técnico',
+            summary: formData.summary || `CV cargado desde archivo "${file.name}".`
+          };
+          setUploadNotice(`¡CV "${file.name}" subido e información importada con éxito al perfil!`);
+        } else {
+          // Only update cvText and cvFileName, preserving user's typed profile fields
+          updatedProfile = {
+            ...formData,
+            cvText: textContent,
+            cvFileName: file.name
+          };
+          setUploadNotice(`¡Texto del CV "${file.name}" guardado en tu perfil! Tus datos personales del formulario se mantuvieron intactos.`);
+        }
 
         setFormData(updatedProfile);
         // Automáticamente guardar en localStorage y estado global
         onSaveProfile(updatedProfile);
         setSavedSuccess(true);
-        setUploadNotice(`¡CV "${file.name}" subido e importado con éxito! Se guardó automáticamente en tu perfil.`);
         setTimeout(() => setSavedSuccess(false), 4000);
       } catch (err: any) {
         setUploadNotice(`Error al leer archivo: ${err?.message || 'Asegúrate de subir un archivo con texto legible'}`);
@@ -230,8 +243,22 @@ JavaScript, TypeScript, React, HTML5, CSS3, Tailwind CSS, Node.js, Express, Post
                 <span className="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/30">Auto-Lectura</span>
               </h3>
               <p className="text-xs text-slate-300">
-                Sube tu CV en formato <strong>PDF, Word (.docx), TXT o Markdown</strong>. Extraeremos automáticamente tu texto, email, teléfono y habilidades.
+                Sube tu CV en formato <strong>PDF, Word (.docx), TXT o Markdown</strong> para guardar el texto completo en tu perfil.
               </p>
+
+              <div className="mt-2.5 flex items-center space-x-2 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  id="auto-extract-toggle"
+                  checked={autoExtractFields}
+                  onChange={(e) => setAutoExtractFields(e.target.checked)}
+                  className="rounded bg-slate-800 border-slate-700 text-sky-500 focus:ring-sky-500 w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="auto-extract-toggle" className="cursor-pointer select-none text-sky-200 hover:text-white">
+                  Completar automáticamente nombre, email, teléfono y habilidades en el formulario
+                </label>
+              </div>
+
               {formData.cvFileName && (
                 <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs px-2.5 py-1 rounded-lg">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -419,19 +446,24 @@ JavaScript, TypeScript, React, HTML5, CSS3, Tailwind CSS, Node.js, Express, Post
 
         {/* Texto Completo del CV */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-sky-400" /> Texto Completo de tu Currículum Vitae (CV)
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium text-slate-300 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-sky-400" /> Texto Completo de tu Currículum Vitae (CV)
+            </label>
+            <span className="text-[11px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
+              {formData.cvText ? `${formData.cvText.length} caracteres` : 'Sin texto'}
+            </span>
+          </div>
           <p className="text-xs text-slate-400 mb-2">
-            Pega aquí o revisa el texto de tu CV (Experiencia laboral, estudios, cursos, logros). La IA utilizará esto para analizar el Match % con cada empleo en Argentina.
+            Pega aquí o revisa el texto de tu CV (Experiencia laboral, estudios, cursos, logros). Este texto se guarda en tu navegador y es el que utiliza el sistema de IA para generar las cartas y analizar la compatibilidad con ofertas de empleo.
           </p>
           <textarea
             name="cvText"
             rows={8}
             value={formData.cvText}
             onChange={handleChange}
-            placeholder="Pega aquí todo el contenido de tu CV en formato texto o sube un archivo con el botón de arriba..."
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+            placeholder="Pega aquí todo el contenido de tu CV en formato texto..."
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono leading-relaxed"
             required
           />
         </div>

@@ -467,18 +467,19 @@ app.post('/api/jobs/generate-cover-letter', async (req, res) => {
       return res.status(400).json({ error: 'Datos de perfil y oferta incompletos.' });
     }
 
+    const cleanName = (profile.fullName || 'Candidato').trim();
+
     const generateFallbackLetter = () => {
-      return `Estimado/a responsable de Selección en ${job.company},
+      return `Estimado/a responsable de Selección de ${job.company},
 
-Le escribo con gran entusiasmo para presentar mi candidatura al puesto de "${job.title}". A lo largo de mi trayectoria como ${profile.title || 'profesional'}, he desarrollado sólidas competencias en ${profile.skills?.slice(0, 4).join(', ') || 'mi área de especialización'}, las cuales se alinean de manera directa con los requerimientos descritos para esta posición.
+Les escribo para presentar mi postulación a la búsqueda de ${job.title}. Cuento con experiencia laboral afín y un perfil práctico enfocado en aportar soluciones concretas a su equipo.
 
-Cuento con experiencia en ${profile.summary || 'desarrollo de proyectos y optimización de procesos'}, y poseo una gran motivación para aportar valor y resultados concretos a ${job.company}.
+Adjunto mi CV para que puedan conocer mi experiencia en detalle. Quedo a disposición para mantener una breve conversación cuando lo estimen oportuno.
 
-Quedo a su entera disposición para coordinar una entrevista y profundizar sobre cómo mi perfil puede contribuir a sus objetivos. Adjunto mi CV para su revisión.
+Saludos cordiales,
 
-Atentamente,
-${profile.fullName || 'Candidato'}
-Teléfono: ${profile.phone || ''} | Email: ${profile.email || ''}`;
+${cleanName}
+Email: ${profile.email || ''}${profile.phone ? ` | Tel: ${profile.phone}` : ''}`;
     };
 
     if (!ai) {
@@ -486,31 +487,37 @@ Teléfono: ${profile.phone || ''} | Email: ${profile.email || ''}`;
     }
 
     try {
-      const prompt = `Redacta una Carta de Presentación profesional, formal y convincente en español (estilo argentino profesional) para enviar por email o formulario a una empresa en Argentina.
+      const prompt = `Redacta un correo/carta de presentación MUY BREVE, DIRECTO Y HUMANIZADO en español de Argentina para enviar por email al reclutador de la empresa ${job.company} postulándote al puesto de "${job.title}".
 
 DATOS DEL CANDIDATO:
-- Nombre completo: ${profile.fullName}
-- Título/Puesto actual: ${profile.title}
-- Ubicación: ${profile.location}
-- Habilidades: ${profile.skills?.join(', ')}
-- Experiencia y Resumen: ${profile.summary || profile.experience || profile.cvText}
+- Nombre: ${cleanName}
+- Título/Puesto actual: ${profile.title || ''}
+- Resumen/Experiencia: ${profile.summary || profile.experience || profile.cvText || ''}
 
-DATOS DE LA OFERTA DE TRABAJO:
+DATOS DEL PUESTO AL QUE POSTULA:
 - Puesto: ${job.title}
 - Empresa: ${job.company}
-- Ubicación del puesto: ${job.location}
-- Requisitos principales: ${JSON.stringify(job.requirements || [])}
-- Descripción: ${job.description}
 
-PAUTAS DE REDACCIÓN:
-- Tono formal, empático y directo.
-- Resalta cómo el perfil del candidato resuelve las necesidades específicas del puesto.
-- Cierra con un llamado a la acción solicitando una entrevista breve.
-- Incluye firma al final con nombre y datos de contacto.`;
+REQUISITOS OBLIGATORIOS DE REDACCIÓN Y ESTILO:
+1. ESTILO HUMANO Y ESCUETO: Máximo 2 o 3 párrafos cortos (entre 80 y 120 palabras en total).
+2. TONO: Cercano, natural, humano y profesional (evita modismos o acartonamiento excesivo, sé directo y genuino, sin clichés corporativos largos ni frases de relleno).
+3. ESTRUCTURA:
+   - Saludo breve al equipo de selección o a la empresa.
+   - Párrafo 1: Expresa el interés en la vacante de ${job.title} conectando brevemente tu experiencia clave de manera natural.
+   - Párrafo 2: Menciona de forma fluida que adjuntas tu CV y que quedas disponible para una breve entrevista.
+4. PROHIBICIÓN EN LA FIRMA:
+   - Finaliza ÚNICAMENTE con "Saludos cordiales," seguido del nombre del candidato ("${cleanName}") y los datos de contacto.
+   - NUNCA incluyas la leyenda "(comercio exterior)", ni aclaraciones entre paréntesis al lado del nombre o firma.
+
+Responde con el texto plano directo de la carta.`;
 
       const response = await callGeminiWithFallback(ai, prompt);
 
-      return res.json({ coverLetter: response.text || generateFallbackLetter() });
+      // Clean response text just in case Gemini accidentally added (comercio exterior)
+      let finalLetter = response.text || generateFallbackLetter();
+      finalLetter = finalLetter.replace(/\(?comercio exterior\)?/gi, '').trim();
+
+      return res.json({ coverLetter: finalLetter });
     } catch (aiError: any) {
       console.warn('Gemini cover letter generation notice, using fallback generator:', aiError?.message || 'Quota or connection error');
       return res.json({ coverLetter: generateFallbackLetter() });

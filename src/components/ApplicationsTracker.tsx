@@ -32,19 +32,10 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
   const getStatusBadge = (state: ApplicationState) => {
     switch (state) {
       case 'postulado_auto':
-        return {
-          label: '⚡ Postulación Auto (IA)',
-          style: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-        };
       case 'postulado_manual':
         return {
-          label: '↗ Postulación Manual (Portal)',
-          style: 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-        };
-      case 'pendiente_linkedin':
-        return {
-          label: 'Pendiente Manual (LinkedIn)',
-          style: 'bg-blue-600/20 text-blue-300 border-blue-500/40'
+          label: '✉ Enviado por Email',
+          style: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
         };
       case 'en_revision':
         return {
@@ -63,8 +54,8 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
         };
       default:
         return {
-          label: 'Guardado',
-          style: 'bg-slate-800 text-slate-300 border-slate-700'
+          label: '✉ Enviado por Email',
+          style: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
         };
     }
   };
@@ -116,9 +107,7 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
           className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
         >
           <option value="todas">Todos los estados</option>
-          <option value="postulado_auto">⚡ Postulaciones Automáticas (1-Clic)</option>
-          <option value="postulado_manual">↗ Postulaciones Manuales (Portal)</option>
-          <option value="pendiente_linkedin">Pendientes LinkedIn</option>
+          <option value="postulado_auto">✉ Enviados por Email</option>
           <option value="en_revision">En Revisión de CV</option>
           <option value="entrevista">Entrevistas Agendadas</option>
           <option value="descartado">Descartados</option>
@@ -131,7 +120,7 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
           <Briefcase className="w-12 h-12 text-slate-600 mx-auto" />
           <h3 className="text-base font-semibold text-slate-300">No hay postulaciones registradas en esta vista</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Ve a la pestaña "Buscar Empleos", selecciona ofertas en Argentina y haz clic en "Postularse con IA" o guarda oportunidades de LinkedIn.
+            Ve a la pestaña "Buscar Empleos", selecciona ofertas en Argentina y haz clic en "Enviar Postulación".
           </p>
         </div>
       ) : (
@@ -151,11 +140,6 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
                     <span className="text-[11px] text-slate-400 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {app.appliedAt}
                     </span>
-                    {app.portal === 'linkedin' && (
-                      <span className="text-[10px] bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded border border-blue-700/50">
-                        LinkedIn (Postulación manual directa)
-                      </span>
-                    )}
                   </div>
 
                   <div>
@@ -184,9 +168,7 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
                     onChange={(e) => onUpdateState(app.id, e.target.value as ApplicationState)}
                     className="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500"
                   >
-                    <option value="postulado_auto">⚡ Postulado Auto (IA)</option>
-                    <option value="postulado_manual">↗ Postulado Manual (Portal)</option>
-                    <option value="pendiente_linkedin">Pendiente LinkedIn</option>
+                    <option value="postulado_auto">✉ Enviado por Email</option>
                     <option value="en_revision">En Revisión de CV</option>
                     <option value="entrevista">¡Entrevista!</option>
                     <option value="descartado">Descartado</option>

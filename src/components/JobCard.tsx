@@ -5,16 +5,13 @@ import {
   MapPin,
   Clock,
   DollarSign,
-  ExternalLink,
-  Zap,
+  Send,
   Sparkles,
   ChevronDown,
   ChevronUp,
-  ShieldAlert,
   CheckCircle2,
   AlertTriangle,
-  FileText,
-  Bookmark
+  Mail
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -76,15 +73,11 @@ export const JobCard: React.FC<JobCardProps> = ({
   };
 
   const portalInfo = getPortalBadge(job.portal);
-  const isLinkedIn = job.portal === 'linkedin';
-  const isAutomated = Boolean(job.contactEmail || job.portal === 'direct');
 
   return (
-    <div className={`bg-slate-900/90 border rounded-3xl p-5 shadow-xl transition-all duration-200 hover:border-slate-700 hover:shadow-2xl flex flex-col justify-between ${
-      isLinkedIn ? 'border-blue-900/50 bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950/20' : 'border-slate-800/90'
-    }`}>
+    <div className="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-xl transition-all duration-200 hover:border-slate-700 hover:shadow-2xl flex flex-col justify-between">
       <div>
-        {/* Top row: Portal & Application Mode Badge */}
+        {/* Top row: Portal & Email Badge */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${portalInfo.style}`}>
@@ -92,18 +85,11 @@ export const JobCard: React.FC<JobCardProps> = ({
               {portalInfo.label}
             </span>
 
-            {/* Application Mode Badge: Auto vs Manual */}
-            {isAutomated ? (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1" title="Postulación directa 1-clic con envío automático de CV">
-                <Zap className="w-3 h-3 text-emerald-400" />
-                <span>Auto 1-Clic</span>
-              </span>
-            ) : (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-500/20 text-amber-300 border-amber-500/40 flex items-center gap-1" title="Requiere ingreso a la web del portal. La IA redactará tu carta personalizada.">
-                <ExternalLink className="w-3 h-3 text-amber-400" />
-                <span>Manual en Portal</span>
-              </span>
-            )}
+            {/* Unified Email Badge */}
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1" title="Envío directo de postulación por correo electrónico">
+              <Mail className="w-3 h-3 text-emerald-400" />
+              <span>Envío por Email</span>
+            </span>
 
             <span className="text-xs bg-slate-950/80 text-slate-300 px-2.5 py-1 rounded-full border border-slate-800 font-medium capitalize">
               {job.modality}
@@ -164,19 +150,6 @@ export const JobCard: React.FC<JobCardProps> = ({
             ))}
           </div>
         )}
-
-        {/* LINKEDIN SPECIAL NOTICE BOX */}
-        {isLinkedIn ? (
-          <div className="mb-4 bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-3 text-xs text-emerald-200 space-y-1">
-            <div className="flex items-center space-x-2 font-semibold text-emerald-300">
-              <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>LinkedIn Argentina: Postulación Automática Habilitada</span>
-            </div>
-            <p className="text-slate-300 leading-relaxed text-[11px]">
-              Envío directo de carta de presentación y CV por correo electrónico al reclutador ({job.contactEmail}).
-            </p>
-          </div>
-        ) : null}
       </div>
 
       {/* Actions Row */}
@@ -201,38 +174,15 @@ export const JobCard: React.FC<JobCardProps> = ({
             <span>Match IA</span>
           </button>
 
-          {isAutomated ? (
-            <button
-              onClick={() => onApplyAuto(job)}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center space-x-1.5 transition"
-              title="Postulación automática de 1-clic con envío directo de CV y carta"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-300" />
-              <span>Postulación Auto</span>
-            </button>
-          ) : (
-            <div className="flex items-center space-x-2">
-              {isLinkedIn && (
-                <button
-                  onClick={() => onSaveLinkedInOpportunity(job)}
-                  className="bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs font-medium px-2.5 py-2 rounded-xl border border-blue-800/50 flex items-center gap-1 transition"
-                  title="Guardar en mi tablero sin postularme aún"
-                >
-                  <Bookmark className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="hidden sm:inline">Guardar</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => onApplyAuto(job)}
-                className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-lg shadow-sky-500/25 flex items-center space-x-1.5 transition"
-                title="Genera tu carta con IA y abre el portal oficial para postularte manualmente"
-              >
-                <span>Postulación Manual</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+          {/* Single Unified Send Application Button */}
+          <button
+            onClick={() => onApplyAuto(job)}
+            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center space-x-1.5 transition"
+            title="Redactar carta con IA y enviar postulación por correo electrónico"
+          >
+            <Send className="w-3.5 h-3.5 text-white" />
+            <span>Enviar Postulación</span>
+          </button>
         </div>
       </div>
 

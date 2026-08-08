@@ -193,41 +193,27 @@ export default function App() {
     }
   };
 
-  // Confirm Application (Automated or Manual)
-  const handleConfirmApply = async (finalLetter: string, recipientEmail?: string, isManual?: boolean) => {
+  // Confirm Application (Email Send)
+  const handleConfirmApply = async (finalLetter: string, recipientEmail?: string) => {
     if (!selectedJobForApply) return;
 
-    const isAuto = !isManual;
-    const newState = isAuto ? 'postulado_auto' : 'postulado_manual';
+    const newState: ApplicationState = 'postulado_auto';
     const targetEmail = recipientEmail || selectedJobForApply.contactEmail || `busquedas@${selectedJobForApply.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com.ar`;
 
     try {
-      if (isAuto) {
-        await fetch('/api/gmail/send-application', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            toEmail: targetEmail,
-            jobTitle: selectedJobForApply.title,
-            company: selectedJobForApply.company,
-            coverLetter: finalLetter,
-            cvText: profile.cvText,
-            cvFileName: profile.cvFileName || `CV_${(profile.fullName || 'Candidato').replace(/\s+/g, '_')}.txt`,
-            candidateName: profile.fullName || 'Candidato',
-          }),
-        });
-      } else {
-        await fetch('/api/jobs/apply', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobId: selectedJobForApply.id,
-            coverLetter: finalLetter,
-            userEmail: profile.email || 'djtrocco@gmail.com',
-            isAuto,
-          }),
-        });
-      }
+      await fetch('/api/gmail/send-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail: targetEmail,
+          jobTitle: selectedJobForApply.title,
+          company: selectedJobForApply.company,
+          coverLetter: finalLetter,
+          cvText: profile.cvText,
+          cvFileName: profile.cvFileName || `CV_${(profile.fullName || 'Candidato').replace(/\s+/g, '_')}.txt`,
+          candidateName: profile.fullName || 'Candidato',
+        }),
+      });
 
       const newLog: ApplicationLog = {
         id: `app-${Date.now()}`,

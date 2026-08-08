@@ -238,26 +238,18 @@ export function searchJobsLocal(query: string, location: string, portal: string,
 }
 
 export function generateCoverLetterLocal(profile: UserCVProfile, job: JobOffer): string {
-  const name = profile.fullName || 'Candidato';
-  const role = profile.title || 'profesional';
+  const name = (profile.fullName || 'Candidato').trim();
   const email = profile.email || 'contacto@email.com';
-  const phone = profile.phone || '11 1234-5678';
+  const phone = profile.phone || '';
 
-  return `Estimado/a Equipo de Selección de ${job.company},
+  return `Estimado/a responsable de Selección de ${job.company},
 
-Me dirijo a ustedes con gran entusiasmo para presentar mi candidatura a la posición de "${job.title}".
+Les escribo para presentar mi postulación a la búsqueda de ${job.title}. Cuento con experiencia laboral afín y un perfil práctico enfocado en aportar soluciones concretas a su equipo.
 
-Cuento con experiencia y conocimientos enfocados en ${role}, destacándome por mi compromiso, capacidad de adaptación y trabajo en equipo. Tras revisar atentamente los requisitos para el puesto en ${job.company}, estoy convencido/a de que mi perfil técnico y profesional puede aportar un valor diferencial directo a sus proyectos.
+Adjunto mi CV para que puedan conocer mi experiencia en detalle. Quedo a disposición para mantener una breve conversación cuando lo estimen oportuno.
 
-Entre mis competencias clave que se alinean con su búsqueda destacan:
-${(job.requirements || []).slice(0, 3).map(req => `- Sólidos conocimientos en ${req}`).join('\n')}
+Saludos cordiales,
 
-Quedo a su entera disposición para mantener una entrevista y ampliar detalles sobre mi trayectoria y expectativas profesionales.
-
-Agradezco de antemano su tiempo y consideración.
-
-Atentamente,
 ${name}
-${role}
-Email: ${email} | Tel: ${phone}`;
+Email: ${email}${phone ? ` | Tel: ${phone}` : ''}`;
 }

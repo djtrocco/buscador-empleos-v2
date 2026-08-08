@@ -29,20 +29,11 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
 
   const senderEmail = profile.email || 'djtrocco@gmail.com';
   const cvFileName = profile.cvFileName || `CV_${(profile.fullName || 'Candidato').replace(/\s+/g, '_')}.txt`;
-  const isAutomated = Boolean(job.contactEmail || job.portal === 'direct');
 
   const handleCopy = () => {
     navigator.clipboard.writeText(coverLetterText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleManualApplyAndOpen = () => {
-    handleCopy();
-    if (job.url) {
-      window.open(job.url, '_blank', 'noopener,noreferrer');
-    }
-    onConfirmApply(coverLetterText, recipientEmail, true);
   };
 
   return (
@@ -64,21 +55,14 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
               <span>Redactado con IA Gemini</span>
             </span>
 
-            {isAutomated ? (
-              <span className="inline-flex items-center space-x-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                <Zap className="w-3 h-3 text-emerald-400" />
-                <span>Envío directo por Gmail API</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center space-x-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                <ExternalLink className="w-3 h-3 text-amber-400" />
-                <span>Postulación Manual en Portal</span>
-              </span>
-            )}
+            <span className="inline-flex items-center space-x-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <Mail className="w-3 h-3 text-emerald-400" />
+              <span>Envío directo por Email (Gmail API)</span>
+            </span>
           </div>
 
           <h3 className="text-xl font-bold text-white pt-1">
-            {isAutomated ? 'Postulación y Envío de CV por Email' : 'Asistente para Postulación Manual en Portal'}
+            Postulación y Envío de CV por Correo Electrónico
           </h3>
           <p className="text-xs text-slate-400">
             Puesto: <strong className="text-sky-300">{job.title}</strong> en <strong className="text-sky-300">{job.company}</strong>.
@@ -125,23 +109,13 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
         </div>
 
         {/* Mode explanation alert */}
-        {isAutomated ? (
-          <div className="bg-emerald-950/30 border border-emerald-800/50 p-3.5 rounded-xl text-xs text-emerald-200 flex items-start gap-3">
-            <Mail className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <strong className="font-semibold block text-emerald-300">Envío directo de correo electrónico:</strong>
-              Al hacer clic en "Enviar Postulación por Email", la plataforma enviará un correo a <strong>{recipientEmail}</strong> desde tu cuenta <strong>{senderEmail}</strong> adjuntando tu CV y la carta de presentación.
-            </div>
+        <div className="bg-emerald-950/30 border border-emerald-800/50 p-3.5 rounded-xl text-xs text-emerald-200 flex items-start gap-3">
+          <Mail className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <strong className="font-semibold block text-emerald-300">Envío directo por correo electrónico:</strong>
+            Al hacer clic en "Enviar Postulación por Email", la plataforma enviará un correo a <strong>{recipientEmail}</strong> desde tu cuenta <strong>{senderEmail}</strong> adjuntando tu CV y la carta de presentación.
           </div>
-        ) : (
-          <div className="bg-amber-950/30 border border-amber-800/50 p-3.5 rounded-xl text-xs text-amber-200 flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <strong className="font-semibold block text-amber-300">Postulación Manual Requerida:</strong>
-              Este portal ({job.portal.toUpperCase()}) requiere inicio de sesión en su web. La IA te generó la carta perfecta: haz clic en "Copiar Carta y Abrir Portal" para completar la postulación.
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* Text Area */}
         <div className="relative">
@@ -191,25 +165,14 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
               Cancelar
             </button>
 
-            {isAutomated ? (
-              <button
-                onClick={() => onConfirmApply(coverLetterText, recipientEmail, false)}
-                disabled={isGenerating || !coverLetterText.trim() || !recipientEmail.trim()}
-                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center space-x-2 transition disabled:opacity-50"
-              >
-                <Send className="w-4 h-4 text-white" />
-                <span>Enviar Postulación por Email (Gmail)</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleManualApplyAndOpen}
-                disabled={isGenerating || !coverLetterText.trim()}
-                className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg shadow-sky-500/25 flex items-center space-x-2 transition disabled:opacity-50"
-              >
-                <span>Copiar Carta y Abrir Portal</span>
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              onClick={() => onConfirmApply(coverLetterText, recipientEmail, false)}
+              disabled={isGenerating || !coverLetterText.trim() || !recipientEmail.trim()}
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center space-x-2 transition disabled:opacity-50"
+            >
+              <Send className="w-4 h-4 text-white" />
+              <span>Enviar Postulación por Email</span>
+            </button>
           </div>
         </div>
       </div>

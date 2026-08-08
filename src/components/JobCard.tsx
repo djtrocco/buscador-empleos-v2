@@ -86,9 +86,9 @@ export const JobCard: React.FC<JobCardProps> = ({
             </span>
 
             {/* Unified Email Badge */}
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1" title="Envío directo de postulación por correo electrónico">
-              <Mail className="w-3 h-3 text-emerald-400" />
-              <span>Envío por Email</span>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1 font-mono" title={`Email de contacto directo: ${job.contactEmail || 'Postulación por Email'}`}>
+              <Mail className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{job.contactEmail || 'Envío por Email'}</span>
             </span>
 
             <span className="text-xs bg-slate-950/80 text-slate-300 px-2.5 py-1 rounded-full border border-slate-800 font-medium capitalize">

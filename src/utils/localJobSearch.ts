@@ -144,39 +144,45 @@ function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 
   const sampleCompanies = [
     'Grupo Servicios Arg', 'Mercado Libre Argentina', 'Telecom Argentina', 'Coto CICA',
     'Sanatorio Güemes', 'Estudio Contable & Asociados', 'Carrefour Argentina', 'Banco Galicia',
-    'Frávega', 'Logística Pampa S.A.', 'Farmacity Argentina', 'YPF', 'Globant', 'Distribuidora del Sur'
+    'Frávega', 'Logística Pampa S.A.', 'Farmacity Argentina', 'YPF S.A.', 'Globant Argentina', 'Distribuidora del Sur'
   ];
 
   const locationsList = [
     'Buenos Aires, CABA', 'Córdoba Capital', 'Rosario, Santa Fe', 'Mendoza', 'Buenos Aires, Zona Norte', 'Remoto (Argentina)'
   ];
 
-  const portalsList: JobPortal[] = ['zonajobs', 'bumeran', 'computrabajo', 'linkedin', 'indeed', 'direct'];
+  const portalsList: JobPortal[] = ['zonajobs', 'bumeran', 'computrabajo', 'linkedin', 'indeed'];
   const modalitiesList: JobModality[] = ['hibrido', 'presencial', 'remoto'];
 
   const generated: JobOffer[] = [];
 
   for (let i = 1; i <= targetCount; i++) {
-    const pPortal = portal !== 'todos' ? (portal as JobPortal) : portalsList[i % portalsList.length];
-    const pModality = modality !== 'todas' ? (modality as JobModality) : modalitiesList[i % modalitiesList.length];
+    const pPortal = portal && portal !== 'todos' ? (portal as JobPortal) : portalsList[i % portalsList.length];
+    const pModality = modality && modality !== 'todas' && modality !== 'todos' ? (modality as JobModality) : modalitiesList[i % modalitiesList.length];
 
     let pLoc = locationsList[i % locationsList.length];
-    if (location && location !== 'todas') {
-      if (location.toLowerCase().includes('buenos') || location.toLowerCase().includes('caba')) {
-        pLoc = 'Buenos Aires, CABA';
-      } else if (location.toLowerCase().includes('córdoba') || location.toLowerCase().includes('cordoba')) {
+    if (location && location !== 'todas' && location !== 'Argentina') {
+      const locLower = location.toLowerCase();
+      if (locLower.includes('buenos') || locLower.includes('caba')) {
+        pLoc = i % 2 === 0 ? 'Buenos Aires, CABA' : 'Buenos Aires, Zona Norte';
+      } else if (locLower.includes('córdoba') || locLower.includes('cordoba')) {
         pLoc = 'Córdoba Capital';
-      } else if (location.toLowerCase().includes('rosario')) {
+      } else if (locLower.includes('rosario') || locLower.includes('santa fe')) {
         pLoc = 'Rosario, Santa Fe';
-      } else if (location.toLowerCase().includes('mendoza')) {
-        pLoc = 'Mendoza';
-      } else if (location.toLowerCase().includes('remoto')) {
+      } else if (locLower.includes('mendoza')) {
+        pLoc = 'Mendoza Capital';
+      } else if (locLower.includes('tucumán') || locLower.includes('tucuman')) {
+        pLoc = 'San Miguel de Tucumán';
+      } else if (locLower.includes('remoto')) {
         pLoc = 'Remoto (Desde Argentina)';
+      } else {
+        pLoc = `${location}, Argentina`;
       }
     }
 
     const company = sampleCompanies[i % sampleCompanies.length];
-    const isAutoPortal = pPortal === 'direct' || Boolean(i % 2 === 0);
+    const cleanCompany = normalizeText(company).replace(/[^a-z0-9]/g, '');
+    const contactEmail = `rrhh@${cleanCompany || 'empresa'}.com.ar`;
 
     generated.push({
       id: `dyn-${Date.now()}-${i}`,
@@ -195,7 +201,7 @@ function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 
       ],
       postedDate: `Hace ${i * 2} horas`,
       url: `https://www.bumeran.com.ar/empleos/${normalizeText(capitalizedRole).replace(/\s+/g, '-')}-${i}00.html`,
-      contactEmail: isAutoPortal ? `busquedas@${normalizeText(company).replace(/\s+/g, '')}.com.ar` : undefined,
+      contactEmail,
       matchScore: Math.min(98, 88 + (i % 8)),
       matchAnalysis: {
         matchingSkills: [`Conocimientos en ${capitalizedRole}`, 'Trabajo en equipo', 'Compromiso laboral'],

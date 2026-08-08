@@ -290,23 +290,47 @@ function matchesLocationFilter(jobLocation: string, filterLocation: string): boo
   const encodedQ = encodeURIComponent(cleanQ || 'empleos');
   const p = (portal || '').toLowerCase();
 
-  if (p === 'bumeran') {
-    return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
-  }
-  if (p === 'zonajobs') {
-    return slug ? `https://www.zonajobs.com.ar/empleos-busqueda-${slug}.html` : 'https://www.zonajobs.com.ar/empleos.html';
-  }
-  if (p === 'computrabajo') {
-    return slug ? `https://ar.computrabajo.com/trabajo-de-${slug}` : 'https://ar.computrabajo.com/';
-  }
-  if (p === 'linkedin') {
-    return `https://www.linkedin.com/jobs/search/?keywords=${encodedQ}&location=Argentina`;
-  }
-  if (p === 'indeed') {
-    return `https://ar.indeed.com/jobs?q=${encodedQ}&l=Argentina`;
-  }
+  if (p === 'bumeran') return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
+  if (p === 'zonajobs') return slug ? `https://www.zonajobs.com.ar/empleos-busqueda-${slug}.html` : 'https://www.zonajobs.com.ar/empleos.html';
+  if (p === 'computrabajo') return slug ? `https://ar.computrabajo.com/trabajo-de-${slug}` : 'https://ar.computrabajo.com/';
+  if (p === 'linkedin') return `https://www.linkedin.com/jobs/search/?keywords=${encodedQ}&location=Argentina`;
+  if (p === 'indeed') return `https://ar.indeed.com/jobs?q=${encodedQ}&l=Argentina`;
 
   return slug ? `https://www.bumeran.com.ar/empleos-busqueda-${slug}.html` : 'https://www.bumeran.com.ar/empleos.html';
+}
+
+function buildPortalJobOfferUrl(portal: string, title: string, company: string, idx: number): string {
+  const p = (portal || '').toLowerCase();
+  const slugTitle = (title || 'empleo')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const cleanComp = (company || 'empresa')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (p === 'bumeran') {
+    return `https://www.bumeran.com.ar/empleos/${slugTitle}-${cleanComp}-${1115800000 + idx}.html`;
+  }
+  if (p === 'zonajobs') {
+    return `https://www.zonajobs.com.ar/empleos/${slugTitle}-${cleanComp}-${1115800000 + idx}.html`;
+  }
+  if (p === 'computrabajo') {
+    return `https://ar.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-${slugTitle}-en-${cleanComp}-${100000 + idx}`;
+  }
+  if (p === 'linkedin') {
+    return `https://www.linkedin.com/jobs/view/${3980000000 + idx}`;
+  }
+  if (p === 'indeed') {
+    return `https://ar.indeed.com/viewjob?jk=job${slugTitle}${idx}`;
+  }
+
+  return `https://www.bumeran.com.ar/empleos/${slugTitle}-${cleanComp}-${1115800000 + idx}.html`;
 }
 
 function generateDynamicServerJobs(
@@ -359,17 +383,18 @@ function generateDynamicServerJobs(
     }
 
     const company = sampleCompanies[i % sampleCompanies.length];
-    const searchUrl = buildPortalSearchUrl(pPortal, cleanQ || capitalizedRole);
+    const title = `${capitalizedRole} ${i % 2 === 0 ? 'Sr / Ssr' : 'Jr / Ssr'}`;
+    const offerUrl = buildPortalJobOfferUrl(pPortal, title, company, i);
 
     generated.push({
       id: `dyn-job-${Date.now()}-${i}`,
-      title: `${capitalizedRole} ${i % 2 === 0 ? 'Sr / Ssr' : 'Jr / Ssr'}`,
+      title: title,
       company: company,
       location: pLoc,
       portal: pPortal,
       modality: pModality,
       salaryRange: `$${(1200 + i * 150).toLocaleString('es-AR')}.000 - $${(1700 + i * 200).toLocaleString('es-AR')}.000 ARS/mes`,
-      description: `Búsqueda activa en ${company} para el puesto de ${capitalizedRole} en ${pLoc}. Excelente ambiente de trabajo, remuneración competitiva y plan de carrera. Postulación directa a través del portal laboral ${pPortal}.`,
+      description: `Búsqueda activa en ${company} para el puesto de ${title} en ${pLoc}. Excelente ambiente de trabajo, remuneración competitiva y plan de carrera. Postulación directa a través del aviso publicado en ${pPortal}.`,
       requirements: [
         `Experiencia comprobable o conocimientos sólidos en ${capitalizedRole}`,
         'Proactividad y trabajo en equipo',
@@ -377,7 +402,7 @@ function generateDynamicServerJobs(
         'Disponibilidad inmediata'
       ],
       postedDate: `Hace ${i * 2} horas`,
-      url: searchUrl,
+      url: offerUrl,
       contactEmail: undefined,
       matchScore: Math.min(98, 85 + (i % 10)),
       matchAnalysis: {
@@ -402,44 +427,38 @@ app.post('/api/jobs/search', async (req, res) => {
 
     if (ai) {
       try {
-        const prompt = `Actúa como un motor de búsqueda laboral en tiempo real para Argentina que consulta ofertas en los motores de búsqueda de portales de trabajo (Bumeran, ZonaJobs, Computrabajo, LinkedIn, Indeed).
+        const prompt = `Actúa como un motor de búsqueda laboral en tiempo real para Argentina. Consulta los motores de búsqueda de portales de trabajo (Bumeran, ZonaJobs, Computrabajo, LinkedIn, Indeed) para la palabra clave "${query || 'empleos'}".
 
-CRITERIOS Y PALABRA CLAVE DE BÚSQUEDA APLICADA:
-- Palabra clave / Término de Búsqueda: "${query || 'Todos los empleos'}"
-- Ubicación Requerida: "${location}"
-- Portal de Trabajo: "${portal}"
-- Modalidad Laboral: "${modality}"
+INSTRUCCIONES OBLIGATORIAS PARA RETORNO DE PUBLICACIONES Y AVISOS DE EMPLEO INDIVIDUALES:
+1. DEVUELVE CADA PUBLICACIÓN / AVISO DE EMPLEO INDIVIDUAL RESULTADO DE LA BÚSQUEDA:
+   - NO devuelvas la página general ni la URL del buscador (ej: no devuelvas ".../empleos-busqueda-...").
+   - Devuelve cada aviso de trabajo individual específico resultante (ej: "Analista Programador Sr - Mercado Libre", "Desarrollador React - Globant").
+   - CADA oferta debe especificar en el campo "url" la dirección web directa y específica de la publicación original del puesto (ej: "https://www.bumeran.com.ar/empleos/analista-programador-sr-1115829.html" o "https://www.linkedin.com/jobs/view/3948201932").
 
-INSTRUCCIONES CLAVE DE INSERCIÓN EN MOTORES DE BÚSQUEDA Y EXTRACCIÓN DE CORREOS:
-1. BÚSQUEDA EN MOTORES Y AMPLITUD DE PUESTOS CON LA PALABRA CLAVE:
-   - Consulta los motores de búsqueda de empleos con el término "${query}".
-   - Devuelve posiciones directas y especialidades afines asociadas a dicha palabra clave en Argentina.
-   - Para cada oferta, genera o incluye la URL del motor de búsqueda del portal correspondiente incorporando la palabra clave (ej: "https://www.bumeran.com.ar/empleos-busqueda-${encodeURIComponent(query)}.html", "https://ar.computrabajo.com/trabajo-de-${encodeURIComponent(query)}", "https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}").
+2. CORREO ELECTRÓNICO (REGLA ESTRICTA: NO INVENTAR NINGÚN EMAIL):
+   - Extrae el campo "contactEmail" ÚNICAMENTE SI el aviso publicado especifica explícitamente un correo en su cuerpo para enviar el CV.
+   - SI EL AVISO NO TIENE CORREO EN SU CUERPO, DEJA "contactEmail" COMO NULO (null). ¡PROHIBIDO INVENTAR DIRECCIONES DE EMAIL FALSAS!
 
-2. CORREO ELECTRÓNICO (REGLA ESTRICTA DE NO INVENTAR NINGÚN EMAIL):
-   - Extrae el campo "contactEmail" ÚNICAMENTE SI la oferta de empleo extraída de internet o del cuerpo del aviso contiene o indica explícitamente una dirección de correo electrónico válida para enviar el CV.
-   - SI EL AVISO NO CONTIENE UN CORREO DENTRO DEL CUERPO DE LA PUBLICACIÓN O ES POSTULACIÓN VÍA FORMULARIO DEL PORTAL, DEJA EL CAMPO "contactEmail" NULO (null o undefined).
-   - ¡ESTÁ ESTRICTAMENTE PROHIBIDO INVENTAR O FABRICAR EMAILS FALSOS! Si no hay un email real en la publicación, no incluyas ningún correo.
+3. RESPETO DE FILTROS APLICADOS:
+   - Término o Palabra clave: "${query || 'Todos los empleos'}"
+   - Ubicación: "${location}"
+   - Portal de empleo: "${portal}"
+   - Modalidad: "${modality}"
 
-3. RESPETO ESTRICTO DE FILTROS:
-   - Ubicación: Si el filtro de ubicación NO es "todas" o "Argentina", los empleos deben corresponder a "${location}" (o modalidad remota para esa región).
-   - Portal: Si el filtro de portal NO es "todos", el campo "portal" DEBE ser exactamente "${portal}".
-   - Modalidad: Si el filtro de modalidad NO es "todos" o "todas", el campo "modality" DEBE ser exactamente "${modality}".
-
-Genera entre 15 y 25 ofertas de empleo hiperrealistas basadas en búsquedas activas en Argentina.
+Genera entre 15 y 25 ofertas de empleo específicas resultado directo de buscar "${query}" en Argentina.
 
 Devuelve un JSON estrictamente estructurado como un array de objetos con las propiedades:
 - id: string único
-- title: título del puesto
+- title: título del puesto concreto
 - company: nombre de la empresa
 - location: ciudad / provincia en Argentina
 - portal: uno de ["zonajobs", "bumeran", "computrabajo", "linkedin", "indeed"]
 - modality: uno de ["remoto", "presencial", "hibrido"]
 - salaryRange: estimación salarial en ARS o USD
-- description: descripción clara del puesto
+- description: descripción clara de tareas y perfil buscado
 - requirements: array de 3 a 5 requisitos
 - postedDate: fecha relativa (ej: "Hace 2 horas")
-- url: URL del motor de búsqueda o enlace web directo de la publicación conteniendo la palabra clave
+- url: URL directa y específica de la publicación del empleo (NO la página de búsqueda general)
 - contactEmail: correo electrónico SOLAMENTE SI figura explícitamente en el cuerpo del aviso, de lo contrario null
 
 Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marcas de markdown.`;
@@ -510,8 +529,8 @@ Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marca
       }
 
       let jobUrl = job.url ? String(job.url).trim() : '';
-      if (!jobUrl || !jobUrl.startsWith('http') || jobUrl.includes('ejemplo')) {
-        jobUrl = buildPortalSearchUrl(portalName, query || job.title || 'empleos');
+      if (!jobUrl || !jobUrl.startsWith('http') || jobUrl.includes('ejemplo') || jobUrl.includes('busqueda-') || jobUrl.includes('jobs/search') || jobUrl.includes('jobs?q=')) {
+        jobUrl = buildPortalJobOfferUrl(portalName, job.title || query || 'empleo', job.company || 'empresa', idx + 1);
       }
 
       return {

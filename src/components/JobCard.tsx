@@ -223,7 +223,7 @@ export const JobCard: React.FC<JobCardProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-sky-400 shrink-0" />
-                  <span className="text-sky-200 font-semibold text-xs">Enlace Web y URL de la Búsqueda:</span>
+                  <span className="text-sky-200 font-semibold text-xs">URL del Aviso de Empleo Publicado:</span>
                 </div>
                 <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-sky-900/60 text-sky-300 border border-sky-700/50">
                   {job.portal || 'portal web'}

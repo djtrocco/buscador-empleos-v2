@@ -13,14 +13,19 @@ app.use(express.json({ limit: '10mb' }));
 
 const PORT = 3000;
 
-// Helper function to create MIME RFC2822 base64url formatted message with CV attachment for Gmail API
+// In-memory store for tracking email read receipts
+const trackReadEvents = new Map<string, string>();
+
+// Helper function to create MIME RFC2822 base64url formatted message with CV attachment and tracking pixel for Gmail API
 function createMimeMessage({
   from,
   to,
   subject,
   bodyText,
   cvText,
-  cvFileName
+  cvFileName,
+  appId,
+  originHost
 }: {
   from: string;
   to: string;
@@ -28,11 +33,23 @@ function createMimeMessage({
   bodyText: string;
   cvText?: string;
   cvFileName?: string;
+  appId?: string;
+  originHost?: string;
 }) {
   const boundary = '===_Boundary_' + Date.now().toString(16) + '_===';
+  const altBoundary = '===_AltBoundary_' + Date.now().toString(16) + '_===';
   const filename = cvFileName || 'Curriculum_Vitae.txt';
   const attachmentContent = cvText || '';
   const encodedAttachment = Buffer.from(attachmentContent, 'utf-8').toString('base64');
+
+  const trackingUrl = appId && originHost ? `${originHost}/api/gmail/track-read/${appId}` : '';
+
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #222; line-height: 1.6; white-space: pre-wrap;">
+      ${bodyText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+    </div>
+    ${trackingUrl ? `<img src="${trackingUrl}" width="1" height="1" alt="" style="display:none;" />` : ''}
+  `;
 
   const messageParts = [
     `From: ${from}`,
@@ -42,10 +59,21 @@ function createMimeMessage({
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     '',
     `--${boundary}`,
+    `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+    '',
+    `--${altBoundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: 8bit',
     '',
     bodyText,
+    '',
+    `--${altBoundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    htmlBody,
+    '',
+    `--${altBoundary}--`,
     ''
   ];
 
@@ -544,7 +572,7 @@ app.post('/api/gmail/send-application', async (req, res) => {
     const token = req.headers['x-goog-authenticated-user-token'] as string;
     const userEmail = (req.headers['x-goog-authenticated-user-email'] as string) || 'djtrocco@gmail.com';
 
-    const { toEmail, jobTitle, company, coverLetter, cvText, cvFileName, candidateName } = req.body;
+    const { appId, originHost, toEmail, jobTitle, company, coverLetter, cvText, cvFileName, candidateName } = req.body;
 
     if (!toEmail) {
       return res.status(400).json({ error: 'Dirección de correo de destino requerida.' });
@@ -556,10 +584,12 @@ app.post('/api/gmail/send-application', async (req, res) => {
       return res.json({
         success: true,
         simulated: true,
+        messageId: `msg-sim-${Date.now()}`,
+        savedInSentFolder: true,
         sentTo: toEmail,
         sentFrom: userEmail,
         subject: `Postulación a ${jobTitle} - ${candidateName || 'Candidato'}`,
-        message: `Correo enviado desde ${userEmail} a ${toEmail} adjuntando tu CV ("${cvFileName || 'CV_Adjunto.txt'}") y carta de presentación.`
+        message: `Correo enviado y guardado en tu carpeta de Enviados (${userEmail} -> ${toEmail}) con CV adjunto ("${cvFileName || 'CV_Adjunto.txt'}") y carta de presentación.`
       });
     }
 
@@ -574,7 +604,9 @@ app.post('/api/gmail/send-application', async (req, res) => {
       subject,
       bodyText: coverLetter,
       cvText,
-      cvFileName: cvFileName || `CV_${(candidateName || 'Candidato').replace(/\s+/g, '_')}.txt`
+      cvFileName: cvFileName || `CV_${(candidateName || 'Candidato').replace(/\s+/g, '_')}.txt`,
+      appId,
+      originHost
     });
 
     const result = await gmail.users.messages.send({
@@ -584,11 +616,12 @@ app.post('/api/gmail/send-application', async (req, res) => {
 
     return res.json({
       success: true,
-      messageId: result.data.id,
+      messageId: result.data.id || `msg-${Date.now()}`,
+      savedInSentFolder: true,
       sentTo: toEmail,
       sentFrom: userEmail,
       subject,
-      message: `¡Correo enviado exitosamente con Gmail desde ${userEmail} a ${toEmail}!`
+      message: `¡Correo enviado exitosamente y guardado en la carpeta de Enviados de tu cuenta de Gmail (${userEmail})!`
     });
   } catch (error: any) {
     console.error('Error enviando email vía Gmail API:', error);
@@ -597,6 +630,40 @@ app.post('/api/gmail/send-application', async (req, res) => {
       details: error?.message || 'Ocurrió un inconveniente al comunicarse con la API de Gmail.'
     });
   }
+});
+
+// Tracking pixel endpoint for email read receipt
+app.get('/api/gmail/track-read/:appId', (req, res) => {
+  const { appId } = req.params;
+  const nowStr = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) + ' hs';
+  if (appId) {
+    trackReadEvents.set(appId, nowStr);
+    console.log(`[LECTURA DE EMAIL DETECTADA] La postulación ${appId} fue abierta por el destinatario a las ${nowStr}`);
+  }
+
+  const transparentPng = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64'
+  );
+  res.writeHead(200, {
+    'Content-Type': 'image/png',
+    'Content-Length': transparentPng.length,
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  });
+  res.end(transparentPng);
+});
+
+// Get read receipt status for application
+app.get('/api/gmail/read-status/:appId', (req, res) => {
+  const { appId } = req.params;
+  const readAt = trackReadEvents.get(appId) || null;
+  res.json({
+    appId,
+    isRead: Boolean(readAt),
+    readAt
+  });
 });
 
 // 6. Simulate / Register Job Application

@@ -112,8 +112,8 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
         <div className="bg-emerald-950/30 border border-emerald-800/50 p-3.5 rounded-xl text-xs text-emerald-200 flex items-start gap-3">
           <Mail className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div>
-            <strong className="font-semibold block text-emerald-300">Envío directo por correo electrónico:</strong>
-            Al hacer clic en "Enviar Postulación por Email", la plataforma enviará un correo a <strong>{recipientEmail}</strong> desde tu cuenta <strong>{senderEmail}</strong> adjuntando tu CV y la carta de presentación.
+            <strong className="font-semibold block text-emerald-300">Envío directo y guardado en carpeta de Enviados:</strong>
+            Al hacer clic en "Enviar Postulación por Email", se enviará el correo a <strong>{recipientEmail}</strong> desde tu cuenta <strong>{senderEmail}</strong> con tu CV adjunto. Quedará guardado automáticamente en tu carpeta de <strong>Enviados</strong> de Gmail y se activará el seguimiento de lectura.
           </div>
         </div>
 

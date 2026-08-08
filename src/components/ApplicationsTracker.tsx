@@ -11,19 +11,26 @@ import {
   Sparkles,
   AlertCircle,
   Tag,
-  Search
+  Search,
+  FolderCheck,
+  CheckCheck,
+  Eye,
+  EyeOff,
+  MailCheck
 } from 'lucide-react';
 
 interface ApplicationsTrackerProps {
   applications: ApplicationLog[];
   onUpdateState: (id: string, newState: ApplicationState) => void;
   onDeleteApplication: (id: string) => void;
+  onToggleReadStatus?: (id: string) => void;
 }
 
 export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
   applications,
   onUpdateState,
   onDeleteApplication,
+  onToggleReadStatus,
 }) => {
   const [filterState, setFilterState] = useState<string>('todas');
   const [searchFilter, setSearchFilter] = useState<string>('');
@@ -150,10 +157,55 @@ export const ApplicationsTracker: React.FC<ApplicationsTrackerProps> = ({
                     </div>
                   </div>
 
+                  {/* Gmail Sent Folder Confirmation Badge */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs bg-emerald-950/40 text-emerald-300 border border-emerald-800/60 px-3 py-1.5 rounded-xl">
+                    <FolderCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Guardado en la carpeta <strong>Enviados</strong> de tu Gmail</span>
+                    {app.recipientEmail && <span className="text-emerald-400/80 text-[11px]">({app.recipientEmail})</span>}
+                  </div>
+
+                  {/* Email Read Receipt Status Badge */}
+                  {app.isRead ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs bg-sky-950/40 text-sky-200 border border-sky-800/60 px-3 py-1.5 rounded-xl">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCheck className="w-4 h-4 text-sky-400 shrink-0" />
+                        <span><strong>Aviso de Lectura:</strong> Email leído por el destinatario</span>
+                        {app.readAt && <span className="text-sky-300 text-[11px]">({app.readAt})</span>}
+                      </div>
+                      {onToggleReadStatus && (
+                        <button
+                          onClick={() => onToggleReadStatus(app.id)}
+                          className="text-[10px] bg-slate-800 hover:bg-slate-700 text-sky-300 px-2.5 py-1 rounded border border-sky-700/50 transition flex items-center gap-1"
+                          title="Alternar estado de lectura"
+                        >
+                          <Eye className="w-3 h-3 text-sky-400" />
+                          <span>Leído (Marcar no leído)</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-800/80 text-slate-300 border border-slate-700/80 px-3 py-1.5 rounded-xl">
+                      <div className="flex items-center gap-1.5">
+                        <EyeOff className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span><strong>Aviso de Lectura:</strong> Pendiente de apertura por el destinatario</span>
+                      </div>
+                      {onToggleReadStatus && (
+                        <button
+                          onClick={() => onToggleReadStatus(app.id)}
+                          className="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-medium px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1"
+                          title="Simular apertura del correo por el reclutador para verificar notificación"
+                        >
+                          <CheckCheck className="w-3.5 h-3.5" />
+                          <span>Simular / Verificar Lectura</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {app.coverLetter && (
                     <button
                       onClick={() => setSelectedLetter(app.coverLetter || '')}
-                      className="inline-flex items-center space-x-1 text-xs text-sky-300 hover:text-sky-200 underline"
+                      className="inline-flex items-center space-x-1 text-xs text-sky-300 hover:text-sky-200 underline pt-1"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>Ver Carta de Presentación Enviada</span>

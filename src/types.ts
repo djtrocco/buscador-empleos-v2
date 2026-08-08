@@ -51,6 +51,11 @@ export interface ApplicationLog {
   coverLetter?: string;
   notes?: string;
   matchScore?: number;
+  recipientEmail?: string;
+  gmailMessageId?: string;
+  savedInSentFolder?: boolean;
+  isRead?: boolean;
+  readAt?: string;
 }
 
 export interface DeploymentStep {

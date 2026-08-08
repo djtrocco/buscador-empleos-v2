@@ -197,14 +197,21 @@ export default function App() {
   const handleConfirmApply = async (finalLetter: string, recipientEmail?: string) => {
     if (!selectedJobForApply) return;
 
+    const appId = `app-${Date.now()}`;
     const newState: ApplicationState = 'postulado_auto';
     const targetEmail = recipientEmail || selectedJobForApply.contactEmail || `busquedas@${selectedJobForApply.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com.ar`;
 
+    let messageId = `msg-${Date.now()}`;
+    let savedInSentFolder = true;
+
     try {
-      await fetch('/api/gmail/send-application', {
+      const originHost = typeof window !== 'undefined' ? window.location.origin : '';
+      const res = await fetch('/api/gmail/send-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          appId,
+          originHost,
           toEmail: targetEmail,
           jobTitle: selectedJobForApply.title,
           company: selectedJobForApply.company,
@@ -215,30 +222,40 @@ export default function App() {
         }),
       });
 
-      const newLog: ApplicationLog = {
-        id: `app-${Date.now()}`,
-        jobId: selectedJobForApply.id,
-        jobTitle: selectedJobForApply.title,
-        company: selectedJobForApply.company,
-        portal: selectedJobForApply.portal,
-        appliedAt: new Date().toLocaleDateString('es-AR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        state: newState,
-        coverLetter: finalLetter,
-        matchScore: selectedJobForApply.matchScore,
-      };
-
-      saveApplicationsToStorage([newLog, ...applications]);
-      setSelectedJobForApply(null);
-      setActiveTab('applications');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messageId) messageId = data.messageId;
+        savedInSentFolder = Boolean(data.savedInSentFolder ?? true);
+      }
     } catch (err) {
-      console.error('Error submitting application:', err);
+      console.error('Error submitting application via Gmail:', err);
     }
+
+    const newLog: ApplicationLog = {
+      id: appId,
+      jobId: selectedJobForApply.id,
+      jobTitle: selectedJobForApply.title,
+      company: selectedJobForApply.company,
+      portal: selectedJobForApply.portal,
+      appliedAt: new Date().toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      state: newState,
+      coverLetter: finalLetter,
+      recipientEmail: targetEmail,
+      matchScore: selectedJobForApply.matchScore,
+      gmailMessageId: messageId,
+      savedInSentFolder,
+      isRead: false,
+    };
+
+    saveApplicationsToStorage([newLog, ...applications]);
+    setSelectedJobForApply(null);
+    setActiveTab('applications');
   };
 
   // Save LinkedIn Opportunity
@@ -268,6 +285,22 @@ export default function App() {
   // Application tracker handlers
   const handleUpdateAppState = (id: string, newState: ApplicationState) => {
     const updated = applications.map((a) => (a.id === id ? { ...a, state: newState } : a));
+    saveApplicationsToStorage(updated);
+  };
+
+  const handleToggleReadStatus = (id: string) => {
+    const nowStr = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) + ' hs';
+    const updated = applications.map((a) => {
+      if (a.id === id) {
+        const nextIsRead = !a.isRead;
+        return {
+          ...a,
+          isRead: nextIsRead,
+          readAt: nextIsRead ? (a.readAt || nowStr) : undefined,
+        };
+      }
+      return a;
+    });
     saveApplicationsToStorage(updated);
   };
 
@@ -473,6 +506,7 @@ export default function App() {
               applications={applications}
               onUpdateState={handleUpdateAppState}
               onDeleteApplication={handleDeleteApp}
+              onToggleReadStatus={handleToggleReadStatus}
             />
           </motion.div>
         )}

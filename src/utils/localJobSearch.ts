@@ -238,32 +238,46 @@ function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 
 }
 
 export function searchJobsLocal(query: string, location: string, portal: string, modality: string): JobOffer[] {
-  const scoredJobs = INITIAL_MOCK_JOBS.map((job) => ({
-    job,
-    congruenceScore: computeJobCongruenceScore(job, query)
-  }));
+  const cleanQ = (query || '').trim();
 
-  // Filter existing static mock jobs
-  let filtered = scoredJobs.filter(({ job, congruenceScore }) => {
-    const matchesQuery = query ? congruenceScore > 0 : true;
-    const matchesLocation = matchesLocationFilter(job.location, location);
-    const matchesPortal = portal && portal !== 'todos' ? job.portal === portal : true;
-    const matchesModality = modality && modality !== 'todas' ? job.modality === modality : true;
+  // If a search keyword is entered, generate direct specific job offers matching that keyword
+  if (cleanQ) {
+    const scoredJobs = INITIAL_MOCK_JOBS.map((job) => ({
+      job,
+      congruenceScore: computeJobCongruenceScore(job, cleanQ)
+    })).filter(({ job, congruenceScore }) => {
+      const matchesQuery = congruenceScore >= 50;
+      const matchesLocation = matchesLocationFilter(job.location, location);
+      const matchesPortal = portal && portal !== 'todos' ? job.portal === portal : true;
+      const matchesModality = modality && modality !== 'todas' && modality !== 'todos' ? job.modality === modality : true;
+      return matchesQuery && matchesLocation && matchesPortal && matchesModality;
+    });
 
-    return matchesQuery && matchesLocation && matchesPortal && matchesModality;
-  });
+    scoredJobs.sort((a, b) => b.congruenceScore - a.congruenceScore);
+    const matchedStatic = scoredJobs.map(item => item.job);
 
-  filtered.sort((a, b) => b.congruenceScore - a.congruenceScore);
-  let resultJobs = filtered.map(item => item.job);
+    // Generate dynamic offers specifically for cleanQ to fulfill requested volume
+    const needed = Math.max(8, 12 - matchedStatic.length);
+    const dynamic = generateDynamicJobsForQuery(cleanQ, needed, location, portal, modality);
 
-  // If query is provided but fewer than 5 results are found in static mock list, generate dynamic high-relevance jobs!
-  if (resultJobs.length < 5) {
-    const neededCount = 10 - resultJobs.length;
-    const dynamicJobs = generateDynamicJobsForQuery(query || 'Empleo General', neededCount, location, portal, modality);
-    resultJobs = [...resultJobs, ...dynamicJobs];
+    return [...matchedStatic, ...dynamic];
   }
 
-  return resultJobs;
+  // If no keyword, filter static mock list by location, portal, modality
+  let filtered = INITIAL_MOCK_JOBS.filter((job) => {
+    const matchesLocation = matchesLocationFilter(job.location, location);
+    const matchesPortal = portal && portal !== 'todos' ? job.portal === portal : true;
+    const matchesModality = modality && modality !== 'todas' && modality !== 'todos' ? job.modality === modality : true;
+    return matchesLocation && matchesPortal && matchesModality;
+  });
+
+  if (filtered.length < 8) {
+    const neededCount = 12 - filtered.length;
+    const dynamicJobs = generateDynamicJobsForQuery('Empleo General', neededCount, location, portal, modality);
+    filtered = [...filtered, ...dynamicJobs];
+  }
+
+  return filtered;
 }
 
 export function generateCoverLetterLocal(profile: UserCVProfile, job: JobOffer): string {

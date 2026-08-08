@@ -116,7 +116,7 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 // Helper to call Gemini models with fallback across stable model aliases
-const MODEL_CANDIDATES = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+const MODEL_CANDIDATES = ['gemini-3.6-flash', 'gemini-flash-latest'];
 
 async function callGeminiWithFallback(ai: GoogleGenAI, prompt: string, config?: any) {
   let lastError: any = null;
@@ -465,23 +465,14 @@ Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marca
 
         let responseText = '';
         try {
-          const groundingResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-              tools: [{ googleSearch: {} }]
-            }
-          });
-          if (groundingResponse && groundingResponse.text) {
-            responseText = groundingResponse.text;
-          }
-        } catch (groundingErr) {
-          const fallbackResponse = await callGeminiWithFallback(ai, prompt, {
+          const response = await callGeminiWithFallback(ai, prompt, {
             responseMimeType: 'application/json'
           });
-          if (fallbackResponse && fallbackResponse.text) {
-            responseText = fallbackResponse.text;
+          if (response && response.text) {
+            responseText = response.text;
           }
+        } catch (geminiErr) {
+          console.warn('Ejecución de búsqueda Gemini fallback notice:', geminiErr);
         }
 
         if (responseText) {
@@ -489,10 +480,14 @@ Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marca
           if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '').trim();
           if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '').trim();
 
-          const parsed = JSON.parse(cleanText);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            searchResults = parsed;
-            generatedByAI = true;
+          try {
+            const parsed = JSON.parse(cleanText);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              searchResults = parsed;
+              generatedByAI = true;
+            }
+          } catch (e) {
+            console.warn('Error parsing JSON from Gemini search response');
           }
         }
       } catch (geminiError: any) {

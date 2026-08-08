@@ -121,6 +121,11 @@ export default function App() {
     }
   };
 
+  // Re-run search whenever location, portal or modality filters are selected
+  useEffect(() => {
+    handleSearch();
+  }, [location, portal, modality]);
+
   // Analyze Match score
   const handleAnalyzeMatch = async (job: JobOffer) => {
     setIsAnalyzingMatchId(job.id);

@@ -194,23 +194,40 @@ export default function App() {
   };
 
   // Confirm Application (Automated or Manual)
-  const handleConfirmApply = async (finalLetter: string, isManual?: boolean) => {
+  const handleConfirmApply = async (finalLetter: string, recipientEmail?: string, isManual?: boolean) => {
     if (!selectedJobForApply) return;
 
-    const isAuto = !isManual && Boolean(selectedJobForApply.contactEmail || selectedJobForApply.portal === 'direct');
+    const isAuto = !isManual;
     const newState = isAuto ? 'postulado_auto' : 'postulado_manual';
+    const targetEmail = recipientEmail || selectedJobForApply.contactEmail || `busquedas@${selectedJobForApply.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com.ar`;
 
     try {
-      await fetch('/api/jobs/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId: selectedJobForApply.id,
-          coverLetter: finalLetter,
-          userEmail: profile.email,
-          isAuto,
-        }),
-      });
+      if (isAuto) {
+        await fetch('/api/gmail/send-application', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toEmail: targetEmail,
+            jobTitle: selectedJobForApply.title,
+            company: selectedJobForApply.company,
+            coverLetter: finalLetter,
+            cvText: profile.cvText,
+            cvFileName: profile.cvFileName || `CV_${(profile.fullName || 'Candidato').replace(/\s+/g, '_')}.txt`,
+            candidateName: profile.fullName || 'Candidato',
+          }),
+        });
+      } else {
+        await fetch('/api/jobs/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId: selectedJobForApply.id,
+            coverLetter: finalLetter,
+            userEmail: profile.email || 'djtrocco@gmail.com',
+            isAuto,
+          }),
+        });
+      }
 
       const newLog: ApplicationLog = {
         id: `app-${Date.now()}`,

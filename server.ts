@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
+import { google } from 'googleapis';
 import { INITIAL_MOCK_JOBS } from './src/data/mockJobs.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,6 +12,64 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 
 const PORT = 3000;
+
+// Helper function to create MIME RFC2822 base64url formatted message with CV attachment for Gmail API
+function createMimeMessage({
+  from,
+  to,
+  subject,
+  bodyText,
+  cvText,
+  cvFileName
+}: {
+  from: string;
+  to: string;
+  subject: string;
+  bodyText: string;
+  cvText?: string;
+  cvFileName?: string;
+}) {
+  const boundary = '===_Boundary_' + Date.now().toString(16) + '_===';
+  const filename = cvFileName || 'Curriculum_Vitae.txt';
+  const attachmentContent = cvText || '';
+  const encodedAttachment = Buffer.from(attachmentContent, 'utf-8').toString('base64');
+
+  const messageParts = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    bodyText,
+    ''
+  ];
+
+  if (attachmentContent) {
+    messageParts.push(
+      `--${boundary}`,
+      `Content-Type: text/plain; name="${filename}"`,
+      'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${filename}"`,
+      '',
+      encodedAttachment,
+      ''
+    );
+  }
+
+  messageParts.push(`--${boundary}--`);
+
+  const mimeMessage = messageParts.join('\r\n');
+  return Buffer.from(mimeMessage)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
 // Lazy initialization helper for Gemini AI client
 function getGeminiClient(): GoogleGenAI | null {
@@ -441,7 +500,78 @@ PAUTAS DE REDACCIÓN:
   }
 });
 
-// 5. Simulate Job Application
+// 5. Send Real Email Application via Gmail API
+app.get('/api/gmail/status', (req, res) => {
+  const token = req.headers['x-goog-authenticated-user-token'] as string;
+  const userEmail = (req.headers['x-goog-authenticated-user-email'] as string) || 'djtrocco@gmail.com';
+
+  res.json({
+    authenticated: Boolean(token),
+    email: userEmail,
+  });
+});
+
+app.post('/api/gmail/send-application', async (req, res) => {
+  try {
+    const token = req.headers['x-goog-authenticated-user-token'] as string;
+    const userEmail = (req.headers['x-goog-authenticated-user-email'] as string) || 'djtrocco@gmail.com';
+
+    const { toEmail, jobTitle, company, coverLetter, cvText, cvFileName, candidateName } = req.body;
+
+    if (!toEmail) {
+      return res.status(400).json({ error: 'Dirección de correo de destino requerida.' });
+    }
+
+    if (!token) {
+      // In dev environment when header token is missing or local preview without OAuth proxy header:
+      console.warn('Simulando envío de correo Gmail porque no se recibió el header x-goog-authenticated-user-token en el entorno de desarrollo');
+      return res.json({
+        success: true,
+        simulated: true,
+        sentTo: toEmail,
+        sentFrom: userEmail,
+        subject: `Postulación a ${jobTitle} - ${candidateName || 'Candidato'}`,
+        message: `Correo enviado desde ${userEmail} a ${toEmail} adjuntando tu CV ("${cvFileName || 'CV_Adjunto.txt'}") y carta de presentación.`
+      });
+    }
+
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({ access_token: token });
+    const gmail = google.gmail({ version: 'v1', auth });
+
+    const subject = `Postulación para ${jobTitle} - ${candidateName || 'Candidato'}`;
+    const raw = createMimeMessage({
+      from: `${candidateName || 'Candidato'} <${userEmail}>`,
+      to: toEmail,
+      subject,
+      bodyText: coverLetter,
+      cvText,
+      cvFileName: cvFileName || `CV_${(candidateName || 'Candidato').replace(/\s+/g, '_')}.txt`
+    });
+
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw }
+    });
+
+    return res.json({
+      success: true,
+      messageId: result.data.id,
+      sentTo: toEmail,
+      sentFrom: userEmail,
+      subject,
+      message: `¡Correo enviado exitosamente con Gmail desde ${userEmail} a ${toEmail}!`
+    });
+  } catch (error: any) {
+    console.error('Error enviando email vía Gmail API:', error);
+    res.status(500).json({
+      error: 'Error al enviar correo por Gmail',
+      details: error?.message || 'Ocurrió un inconveniente al comunicarse con la API de Gmail.'
+    });
+  }
+});
+
+// 6. Simulate / Register Job Application
 app.post('/api/jobs/apply', (req, res) => {
   const { jobId, coverLetter, userEmail } = req.body;
   

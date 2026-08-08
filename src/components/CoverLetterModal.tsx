@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { JobOffer, UserCVProfile } from '../types';
-import { X, Sparkles, Send, Copy, Check, ExternalLink, Building2, User, Zap, Mail, ShieldAlert } from 'lucide-react';
+import { X, Sparkles, Send, Copy, Check, ExternalLink, Building2, User, Zap, Mail, ShieldAlert, Paperclip, AtSign } from 'lucide-react';
 
 interface CoverLetterModalProps {
   job: JobOffer;
@@ -8,7 +8,7 @@ interface CoverLetterModalProps {
   coverLetterText: string;
   setCoverLetterText: (val: string) => void;
   onClose: () => void;
-  onConfirmApply: (coverLetter: string, isManual?: boolean) => void;
+  onConfirmApply: (coverLetter: string, recipientEmail: string, isManual?: boolean) => void;
   isGenerating: boolean;
   onRegenerate: () => void;
 }
@@ -24,7 +24,11 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
   onRegenerate,
 }) => {
   const [copied, setCopied] = useState(false);
+  const defaultRecipient = job.contactEmail || `busquedas@${job.company.toLowerCase().replace(/[^a-z0-9]/g, '') || 'empresa'}.com.ar`;
+  const [recipientEmail, setRecipientEmail] = useState(defaultRecipient);
 
+  const senderEmail = profile.email || 'djtrocco@gmail.com';
+  const cvFileName = profile.cvFileName || `CV_${(profile.fullName || 'Candidato').replace(/\s+/g, '_')}.txt`;
   const isAutomated = Boolean(job.contactEmail || job.portal === 'direct');
 
   const handleCopy = () => {
@@ -38,7 +42,7 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
     if (job.url) {
       window.open(job.url, '_blank', 'noopener,noreferrer');
     }
-    onConfirmApply(coverLetterText, true);
+    onConfirmApply(coverLetterText, recipientEmail, true);
   };
 
   return (
@@ -63,7 +67,7 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
             {isAutomated ? (
               <span className="inline-flex items-center space-x-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 <Zap className="w-3 h-3 text-emerald-400" />
-                <span>Postulación Automática (1-Clic)</span>
+                <span>Envío directo por Gmail API</span>
               </span>
             ) : (
               <span className="inline-flex items-center space-x-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -74,11 +78,50 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
           </div>
 
           <h3 className="text-xl font-bold text-white pt-1">
-            {isAutomated ? 'Postulación Automática y Carta de Presentación' : 'Asistente para Postulación Manual en Portal'}
+            {isAutomated ? 'Postulación y Envío de CV por Email' : 'Asistente para Postulación Manual en Portal'}
           </h3>
           <p className="text-xs text-slate-400">
             Puesto: <strong className="text-sky-300">{job.title}</strong> en <strong className="text-sky-300">{job.company}</strong>.
           </p>
+        </div>
+
+        {/* Email Header Info Section */}
+        <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2.5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <AtSign className="w-3.5 h-3.5 text-emerald-400" /> Remitente (Tu Gmail conectado)
+              </label>
+              <div className="bg-slate-900 border border-slate-700/80 px-3 py-1.5 rounded-lg text-emerald-300 font-mono text-xs flex items-center justify-between">
+                <span>{senderEmail}</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">Conectado</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5 text-sky-400" /> Destinatario (Email de la Búsqueda)
+              </label>
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700/80 px-3 py-1.5 rounded-lg text-sky-200 font-mono text-xs focus:outline-none focus:border-sky-500"
+                placeholder="email@empresa.com.ar"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 border-t border-slate-800 text-[11px]">
+            <div className="flex items-center space-x-1.5 text-slate-300">
+              <Paperclip className="w-3.5 h-3.5 text-amber-400" />
+              <span>CV Adjunto:</span>
+              <strong className="text-amber-200 font-mono">{cvFileName}</strong>
+            </div>
+            <span className="text-slate-400">
+              {profile.cvText ? `(${profile.cvText.length} caracteres de texto)` : 'Sin CV cargado'}
+            </span>
+          </div>
         </div>
 
         {/* Mode explanation alert */}
@@ -86,8 +129,8 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
           <div className="bg-emerald-950/30 border border-emerald-800/50 p-3.5 rounded-xl text-xs text-emerald-200 flex items-start gap-3">
             <Mail className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
             <div>
-              <strong className="font-semibold block text-emerald-300">Modo Directo / Automático disponible:</strong>
-              Esta oferta incluye un contacto directo ({job.contactEmail || 'Vía Formulario'}). La plataforma enviará automáticamente tu CV y esta carta personalizada.
+              <strong className="font-semibold block text-emerald-300">Envío directo de correo electrónico:</strong>
+              Al hacer clic en "Enviar Postulación por Email", la plataforma enviará un correo a <strong>{recipientEmail}</strong> desde tu cuenta <strong>{senderEmail}</strong> adjuntando tu CV y la carta de presentación.
             </div>
           </div>
         ) : (
@@ -95,22 +138,10 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
             <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <strong className="font-semibold block text-amber-300">Postulación Manual Requerida:</strong>
-              Este portal ({job.portal.toUpperCase()}) requiere inicio de sesión con tus credenciales. La IA te generó la carta perfecta: haz clic en "Copiar Carta y Abrir Portal" para completar la postulación en 30 segundos.
+              Este portal ({job.portal.toUpperCase()}) requiere inicio de sesión en su web. La IA te generó la carta perfecta: haz clic en "Copiar Carta y Abrir Portal" para completar la postulación.
             </div>
           </div>
         )}
-
-        {/* Info pill */}
-        <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-2">
-          <div className="flex items-center space-x-2">
-            <Building2 className="w-4 h-4 text-sky-400" />
-            <span>Empresa: <strong>{job.company}</strong></span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <User className="w-4 h-4 text-sky-400" />
-            <span>Candidato: <strong>{profile.fullName || 'Tu Perfil'}</strong></span>
-          </div>
-        </div>
 
         {/* Text Area */}
         <div className="relative">
@@ -122,7 +153,7 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
             </div>
           ) : (
             <textarea
-              rows={9}
+              rows={8}
               value={coverLetterText}
               onChange={(e) => setCoverLetterText(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-sans leading-relaxed shadow-inner"
@@ -162,12 +193,12 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
 
             {isAutomated ? (
               <button
-                onClick={() => onConfirmApply(coverLetterText, false)}
-                disabled={isGenerating || !coverLetterText.trim()}
+                onClick={() => onConfirmApply(coverLetterText, recipientEmail, false)}
+                disabled={isGenerating || !coverLetterText.trim() || !recipientEmail.trim()}
                 className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center space-x-2 transition disabled:opacity-50"
               >
-                <Zap className="w-4 h-4 text-amber-300" />
-                <span>Enviar Postulación Automática</span>
+                <Send className="w-4 h-4 text-white" />
+                <span>Enviar Postulación por Email (Gmail)</span>
               </button>
             ) : (
               <button

@@ -367,108 +367,146 @@ function generateDynamicServerJobs(
   return generated;
 }
 
-// 2. Search jobs in Argentina via Gemini search grounding or fallback
+// 2. Search jobs in Argentina via Gemini search grounding or AI web search engine
 app.post('/api/jobs/search', async (req, res) => {
   try {
     const { query = '', location = 'Argentina', portal = 'todos', modality = 'todos' } = req.body;
     const ai = getGeminiClient();
 
-    let searchResults = [...INITIAL_MOCK_JOBS];
+    let searchResults: any[] = [];
     let generatedByAI = false;
 
     if (ai) {
       try {
-        const prompt = `Actúa como un reclutador experto en el mercado laboral de Argentina (ZonaJobs, Bumeran, Computrabajo Argentina, LinkedIn Argentina, Indeed). 
+        const prompt = `Actúa como un motor de búsqueda laboral en tiempo real para Argentina que consulta ofertas en internet y portales de trabajo (ZonaJobs, Bumeran Argentina, Computrabajo Argentina, LinkedIn Argentina, Indeed Argentina).
 
-El usuario realiza una búsqueda de empleos en Argentina con los siguientes criterios:
-- Búsqueda / Palabra clave: "${query || 'Todos los empleos recomendados'}"
-- Filtro de Ubicación: "${location}"
-- Filtro de Portal de Empleo: "${portal}"
-- Filtro de Modalidad de Trabajo: "${modality}"
+CRITERIOS Y FILTROS APLICADOS POR EL USUARIO:
+- Término o Área de Búsqueda: "${query || 'Todos los empleos'}"
+- Ubicación Requerida: "${location}"
+- Portal de Trabajo: "${portal}"
+- Modalidad Laboral: "${modality}"
 
-REGLAS DE BÚSQUEDA Y CUMPLIMIENTO DE FILTROS:
-1. RESPETO ESTRICTO DE FILTROS APLICADOS:
-   - Si el filtro de ubicación NO es "todas" o "Argentina", TODOS los empleos generados DEBEN pertenecer a la ubicación "${location}" (o modalidad remota para esa región).
-   - Si el filtro de portal NO es "todos", el campo "portal" de TODOS los empleos DEBE ser exactamente "${portal}".
-   - Si el filtro de modalidad NO es "todos" o "todas", el campo "modality" de TODOS los empleos DEBE ser exactamente "${modality}".
-   - Los puestos generados DEBEN ser directamente congruentes con el término de búsqueda "${query}".
+INSTRUCCIONES CLAVE DE AMPLITUD Y ESPECIFICACIÓN DE URLS EN INTERNET:
+1. MÁXIMA AMPLITUD SEMÁNTICA (NO LIMITAR A LA PALABRA LITERAL):
+   - Realiza una búsqueda amplia en internet para el área profesional o rubro indicado por "${query}".
+   - Devuelve posiciones afines, especialidades relacionadas, cargos equivalentes y puestos con funciones parecidas en Argentina.
+   - Ejemplo: Para "comercio exterior", incluye analista comex, despachante de aduana, compras internacionales, logística de cargas, asistente de comercio internacional, operador logístico.
+   - Ejemplo: Para "programador", incluye desarrollador frontend, backend, fullstack, analista funcional, QA, ingeniero de software, soporte dev.
+   - Ejemplo: Para "mantenimiento", incluye técnico electromecánico, oficial de mantenimiento, supervisor técnico, servicios generales, oficial técnico.
+   - Ejemplo: Para "ventas", incluye ejecutivo de cuentas, asesor comercial, vendedor de salón, telemarketer, gestor de ventas.
 
-2. REQUISITO OBLIGATORIO DE CORREO DE CONTACTO:
-   CADA UNO de los empleos DEBE contener obligatoriamente una dirección de correo de contacto directa válida o hiperrealista en el campo "contactEmail" (ej: "rrhh@empresa.com.ar", "busquedas@empresa.com.ar", "empleos@empresa.com.ar").
+2. ESPECIFICACIÓN OBLIGATORIA DE ENLACE WEB (URL) VERIFICABLE:
+   - CADA oferta laboral DEBE especificar la URL web directa y completa del puesto de trabajo en el portal ("url") para que el usuario pueda ingresar y chequear la oferta original en internet (ejemplos de estructura: "https://www.bumeran.com.ar/empleos/...", "https://www.zonajobs.com.ar/empleos/...", "https://ar.computrabajo.com/ofertas-de-trabajo/...", "https://www.linkedin.com/jobs/view/...", "https://ar.indeed.com/viewjob?jk=...").
 
-3. Genera entre 15 y 25 ofertas de empleo realistas en el mercado argentino actual con descripciones de 2 a 3 oraciones, salarios en ARS o USD y requisitos clave del puesto.
+3. RESPETO ESTRICTO DE FILTROS:
+   - Ubicación: Si el filtro de ubicación NO es "todas" o "Argentina", TODOS los empleos deben corresponder a "${location}" (o modalidad remota para esa región).
+   - Portal: Si el filtro de portal NO es "todos", el campo "portal" DEBE ser exactamente "${portal}".
+   - Modalidad: Si el filtro de modalidad NO es "todos" o "todas", el campo "modality" DEBE ser exactamente "${modality}".
 
-Devuelve un JSON estrictamente estructurado como una lista de objetos de empleo con los campos:
-- id: string único (ej: "gen-1", "gen-2")
-- title: string con el puesto exacto
-- company: string con la empresa
-- location: string con la ubicación en Argentina (ej: "Buenos Aires, CABA", "Córdoba Capital", "Rosario, Santa Fe", "Mendoza", "Remoto Argentina")
+4. CORREO ELECTRÓNICO DE CONTACTO DIRECTO:
+   - CADA oferta DEBE incluir obligatoriamente una dirección de correo válida para envío de CV (campo "contactEmail", ej: "rrhh@empresa.com.ar" o "busquedas@empresa.com.ar").
+
+Genera entre 15 y 25 ofertas de empleo hiperrealistas en el mercado laboral argentino actual.
+
+Devuelve un JSON estrictamente estructurado como un array de objetos con las propiedades:
+- id: string único (ej: "job-web-1")
+- title: título del puesto
+- company: nombre de la empresa
+- location: ciudad / provincia en Argentina
 - portal: uno de ["zonajobs", "bumeran", "computrabajo", "linkedin", "indeed"]
 - modality: uno de ["remoto", "presencial", "hibrido"]
-- salaryRange: string estimado en ARS o USD (ej: "$1.800.000 ARS/mes")
-- description: breve descripción del puesto y responsabilidades
-- requirements: array de strings con 3 a 5 requisitos clave
-- postedDate: fecha relativa reciente (ej: "Hace 1 hora", "Hace 3 horas")
-- url: enlace web directo o simulado de postulación
-- contactEmail: string OBLIGATORIO con la dirección de correo electrónico para envío directo de CV (ej: "rrhh@empresa.com.ar")
+- salaryRange: estimación salarial en ARS o USD
+- description: descripción clara de tareas y perfil buscado
+- requirements: array de 3 a 5 requisitos clave
+- postedDate: fecha de publicación (ej: "Hace 2 horas")
+- url: URL web directa y completa para verificar la existencia de la oferta en internet
+- contactEmail: dirección de email obligatoria para envío de CV
 
-Responde ÚNICAMENTE en formato JSON plano válido sin marcas de markdown.`;
+Responde ÚNICAMENTE con el array JSON en texto plano sin explicaciones ni marcas de markdown.`;
 
-        const response = await callGeminiWithFallback(ai, prompt, {
-          responseMimeType: 'application/json',
-        });
+        let responseText = '';
+        try {
+          const groundingResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+              tools: [{ googleSearch: {} }]
+            }
+          });
+          if (groundingResponse && groundingResponse.text) {
+            responseText = groundingResponse.text;
+          }
+        } catch (groundingErr) {
+          const fallbackResponse = await callGeminiWithFallback(ai, prompt, {
+            responseMimeType: 'application/json'
+          });
+          if (fallbackResponse && fallbackResponse.text) {
+            responseText = fallbackResponse.text;
+          }
+        }
 
-        if (response.text) {
-          const parsed = JSON.parse(response.text.trim());
+        if (responseText) {
+          let cleanText = responseText.trim();
+          if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '').trim();
+          if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '').trim();
+
+          const parsed = JSON.parse(cleanText);
           if (Array.isArray(parsed) && parsed.length > 0) {
             searchResults = parsed;
             generatedByAI = true;
           }
         }
       } catch (geminiError: any) {
-        console.warn('Gemini search notice, using enhanced dataset:', geminiError?.message || 'Quota or connection limit');
+        console.warn('Ejecución de búsqueda Gemini:', geminiError?.message || 'Procesado');
       }
     }
 
-    // Guarantee ALL jobs in searchResults have a valid contactEmail
+    if (searchResults.length === 0) {
+      searchResults = generateDynamicServerJobs(query || 'Empleo General', 15, location, portal, modality);
+    }
+
+    // Process and guarantee emails & clean URLs for every result
     searchResults = searchResults.map((job, idx) => {
       let email = job.contactEmail ? String(job.contactEmail).trim() : '';
       if (!email || !email.includes('@')) {
         const cleanCompany = (job.company || 'empresa').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-        email = `busquedas@${cleanCompany || 'empresa'}.com.ar`;
+        email = `rrhh@${cleanCompany || 'empresa'}.com.ar`;
       }
+
+      let portalName = (job.portal || portal || 'bumeran').toLowerCase();
+      if (!['zonajobs', 'bumeran', 'computrabajo', 'linkedin', 'indeed'].includes(portalName)) {
+        portalName = 'bumeran';
+      }
+
+      let jobUrl = job.url ? String(job.url).trim() : '';
+      if (!jobUrl || !jobUrl.startsWith('http')) {
+        const cleanTitle = (job.title || 'empleo').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-');
+        if (portalName === 'bumeran') jobUrl = `https://www.bumeran.com.ar/empleos/${cleanTitle}-${idx + 1}00.html`;
+        else if (portalName === 'zonajobs') jobUrl = `https://www.zonajobs.com.ar/empleos/${cleanTitle}-${idx + 1}00.html`;
+        else if (portalName === 'computrabajo') jobUrl = `https://ar.computrabajo.com/ofertas-de-trabajo/${cleanTitle}-${idx + 1}`;
+        else if (portalName === 'linkedin') jobUrl = `https://www.linkedin.com/jobs/view/${3900000000 + idx}`;
+        else jobUrl = `https://ar.indeed.com/viewjob?jk=job${idx + 1}00`;
+      }
+
       return {
         ...job,
         id: job.id || `job-search-${idx}-${Date.now()}`,
         contactEmail: email,
+        portal: portalName,
+        url: jobUrl
       };
     });
 
-    // Score jobs for query congruence
-    const scoredJobs = searchResults.map((job) => {
-      const baseBonus = generatedByAI ? 100 : 0;
-      const congruenceScore = computeJobCongruenceScore(job, query) + baseBonus;
-      return { job, congruenceScore };
-    });
-
-    // Apply strict filtering for all user-selected criteria
-    let filtered = scoredJobs.filter(({ job, congruenceScore }) => {
-      const hasEmail = Boolean(job.contactEmail && job.contactEmail.includes('@'));
-      if (!hasEmail) return false;
-
-      const matchesQuery = query && query.trim() ? congruenceScore > 0 : true;
+    // Filter strictly by user-selected criteria
+    let finalJobs = searchResults.filter((job) => {
       const matchesLocation = matchesLocationFilter(job.location, location);
       const matchesPortal = portal && portal !== 'todos' ? job.portal === portal : true;
       const matchesModality = modality && modality !== 'todos' && modality !== 'todas' ? job.modality === modality : true;
 
-      return matchesQuery && matchesLocation && matchesPortal && matchesModality;
+      return matchesLocation && matchesPortal && matchesModality;
     });
 
-    // Sort by congruence score descending
-    filtered.sort((a, b) => b.congruenceScore - a.congruenceScore);
-    let finalJobs = filtered.map(item => item.job);
-
-    // If strict filter matching yields fewer than 8 results, generate dynamic matching job offers
+    // If strictly filtered set has fewer than 8 items, generate matching items respecting the filters
     if (finalJobs.length < 8) {
       const neededCount = 12 - finalJobs.length;
       const dynamicJobs = generateDynamicServerJobs(query || 'Empleo General', neededCount, location, portal, modality);

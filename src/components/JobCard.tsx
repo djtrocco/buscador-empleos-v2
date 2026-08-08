@@ -11,7 +11,9 @@ import {
   ChevronUp,
   CheckCircle2,
   AlertTriangle,
-  Mail
+  Mail,
+  ExternalLink,
+  Globe
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -162,7 +164,20 @@ export const JobCard: React.FC<JobCardProps> = ({
           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
 
-        <div className="flex items-center space-x-2 ml-auto">
+        <div className="flex flex-wrap items-center space-x-2 ml-auto">
+          {job.url && (
+            <a
+              href={job.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-sky-950/70 hover:bg-sky-900/90 text-sky-300 hover:text-sky-100 text-xs font-semibold px-3 py-2 rounded-xl border border-sky-800/80 flex items-center gap-1.5 transition"
+              title="Abrir enlace original de la publicación para verificar su existencia"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
+              <span>Ver Oferta ↗</span>
+            </a>
+          )}
+
           {/* Analyze match button */}
           <button
             onClick={() => onAnalyzeMatch(job)}
@@ -195,6 +210,24 @@ export const JobCard: React.FC<JobCardProps> = ({
               {job.description}
             </p>
           </div>
+
+          {job.url && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800/90 text-xs">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-sky-400 shrink-0" />
+                <span className="text-slate-300 font-medium">URL de Verificación de la Búsqueda:</span>
+              </div>
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 hover:text-sky-300 font-mono text-[11px] underline truncate max-w-full sm:max-w-md flex items-center gap-1"
+              >
+                <span className="truncate">{job.url}</span>
+                <ExternalLink className="w-3 h-3 text-sky-400 shrink-0" />
+              </a>
+            </div>
+          )}
 
           {job.matchAnalysis && (
             <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2">

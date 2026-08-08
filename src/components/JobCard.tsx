@@ -212,20 +212,36 @@ export const JobCard: React.FC<JobCardProps> = ({
           </div>
 
           {job.url && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800/90 text-xs">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-sky-400 shrink-0" />
-                <span className="text-slate-300 font-medium">URL de Verificación de la Búsqueda:</span>
+            <div className="bg-sky-950/40 p-3.5 rounded-xl border border-sky-800/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-sky-400 shrink-0" />
+                  <span className="text-sky-200 font-semibold text-xs">Enlace Web y URL de la Búsqueda:</span>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-sky-900/60 text-sky-300 border border-sky-700/50">
+                  {job.portal || 'portal web'}
+                </span>
               </div>
-              <a
-                href={job.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-400 hover:text-sky-300 font-mono text-[11px] underline truncate max-w-full sm:max-w-md flex items-center gap-1"
-              >
-                <span className="truncate">{job.url}</span>
-                <ExternalLink className="w-3 h-3 text-sky-400 shrink-0" />
-              </a>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                <a
+                  href={job.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-400 hover:text-sky-300 font-mono text-xs underline break-all flex items-center gap-1.5"
+                  title="Abrir publicación original en internet"
+                >
+                  <span>{job.url}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-sky-400 shrink-0 inline" />
+                </a>
+                <a
+                  href={job.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 transition shadow"
+                >
+                  <span>Ver en internet ↗</span>
+                </a>
+              </div>
             </div>
           )}
 

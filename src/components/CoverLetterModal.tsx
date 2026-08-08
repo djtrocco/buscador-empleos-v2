@@ -64,9 +64,23 @@ export const CoverLetterModal: React.FC<CoverLetterModalProps> = ({
           <h3 className="text-xl font-bold text-white pt-1">
             Postulación y Envío de CV por Correo Electrónico
           </h3>
-          <p className="text-xs text-slate-400">
-            Puesto: <strong className="text-sky-300">{job.title}</strong> en <strong className="text-sky-300">{job.company}</strong>.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+            <p>
+              Puesto: <strong className="text-sky-300">{job.title}</strong> en <strong className="text-sky-300">{job.company}</strong>.
+            </p>
+            {job.url && (
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 font-mono text-[11px] underline bg-sky-950/60 px-2.5 py-1 rounded-lg border border-sky-800/80"
+                title="Ver oferta de trabajo original"
+              >
+                <ExternalLink className="w-3 h-3 text-sky-400" />
+                <span>Ver Publicación Web ↗</span>
+              </a>
+            )}
+          </div>
         </div>
 
         {/* Email Header Info Section */}

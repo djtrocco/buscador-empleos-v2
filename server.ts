@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { INITIAL_MOCK_JOBS } from './src/data/mockJobs.js';
 
@@ -27,6 +26,29 @@ function getGeminiClient(): GoogleGenAI | null {
       },
     },
   });
+}
+
+// Helper to call Gemini models with fallback across stable model aliases
+const MODEL_CANDIDATES = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+
+async function callGeminiWithFallback(ai: GoogleGenAI, prompt: string, config?: any) {
+  let lastError: any = null;
+  for (const model of MODEL_CANDIDATES) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        ...(config ? { config } : {}),
+      });
+      if (response && response.text) {
+        return response;
+      }
+    } catch (err: any) {
+      console.warn(`Model ${model} attempt notice:`, err?.message || err);
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('All Gemini model candidates failed');
 }
 
 // 1. Health check endpoint
@@ -189,12 +211,8 @@ Devuelve un JSON estrictamente estructurado como una lista de 12 a 16 objetos de
 
 Responde ÚNICAMENTE en formato JSON plano válido sin marcas de markdown extra.`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
+        const response = await callGeminiWithFallback(ai, prompt, {
+          responseMimeType: 'application/json',
         });
 
         if (response.text) {
@@ -326,21 +344,17 @@ Devuelve un JSON con:
 3. missingSkills: array de strings con conocimientos o requisitos que le faltan o podría reforzar.
 4. summary: un resumen explicativo breve y motivador en español de Argentina (2-3 oraciones).`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              matchScore: { type: Type.INTEGER },
-              matchingSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
-              missingSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
-              summary: { type: Type.STRING }
-            },
-            required: ['matchScore', 'matchingSkills', 'missingSkills', 'summary']
-          }
+      const response = await callGeminiWithFallback(ai, prompt, {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            matchScore: { type: Type.INTEGER },
+            matchingSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
+            missingSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
+            summary: { type: Type.STRING }
+          },
+          required: ['matchScore', 'matchingSkills', 'missingSkills', 'summary']
         }
       });
 
@@ -414,10 +428,7 @@ PAUTAS DE REDACCIÓN:
 - Cierra con un llamado a la acción solicitando una entrevista breve.
 - Incluye firma al final con nombre y datos de contacto.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: prompt,
-      });
+      const response = await callGeminiWithFallback(ai, prompt);
 
       return res.json({ coverLetter: response.text || generateFallbackLetter() });
     } catch (aiError: any) {
@@ -451,6 +462,7 @@ app.post('/api/jobs/apply', (req, res) => {
 // Vite Middleware for Dev and Static server for Prod
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

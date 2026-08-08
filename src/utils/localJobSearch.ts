@@ -1,14 +1,19 @@
-import { JobOffer, UserCVProfile } from '../types';
+import { JobOffer, UserCVProfile, JobPortal, JobModality } from '../types';
 import { INITIAL_MOCK_JOBS } from '../data/mockJobs';
 
+function normalizeText(str: string): string {
+  return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function getSemanticSynonyms(term: string): string[] {
-  const clean = term.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const clean = normalizeText(term);
   const synonymMap: Record<string, string[]> = {
-    programador: ['desarrollador', 'dev', 'developer', 'software', 'sistemas', 'analista', 'tecnologia', 'codigo', 'it', 'ingeniero', 'frontend', 'backend', 'fullstack', 'web'],
+    programador: ['desarrollador', 'dev', 'developer', 'software', 'sistemas', 'analista', 'tecnologia', 'codigo', 'it', 'ingeniero', 'frontend', 'backend', 'fullstack', 'web', 'python', 'java'],
     desarrollador: ['programador', 'dev', 'developer', 'software', 'sistemas', 'analista', 'tecnologia', 'codigo', 'it', 'ingeniero', 'frontend', 'backend', 'fullstack', 'web'],
     dev: ['desarrollador', 'programador', 'developer', 'software', 'sistemas', 'analista', 'it'],
     react: ['frontend', 'web', 'javascript', 'typescript', 'ui', 'desarrollador', 'programador'],
     node: ['backend', 'express', 'javascript', 'typescript', 'api', 'desarrollador', 'programador'],
+    python: ['backend', 'data', 'django', 'fastapi', 'desarrollador', 'programador', 'analista'],
     datos: ['data', 'powerbi', 'sql', 'analista', 'bi', 'excel', 'estadistica', 'python'],
     soporte: ['helpdesk', 'tecnico', 'redes', 'sistemas', 'hardware', 'mantenimiento', 'atencion', 'infraestructura', 'sysadmin'],
     diseno: ['ux', 'ui', 'figma', 'diseñador', 'creativo', 'web', 'producto', 'canva'],
@@ -31,7 +36,12 @@ function getSemanticSynonyms(term: string): string[] {
     deposito: ['logistica', 'stock', 'operario', 'picking', 'packing', 'almacen', 'expedicion'],
     rrhh: ['recursos humanos', 'recruiter', 'reclutador', 'seleccion', 'talento', 'personal', 'psicologia'],
     marketing: ['seo', 'meta ads', 'google ads', 'community', 'redes', 'digital', 'publicidad', 'copywriting', 'tiktok', 'reels'],
-    salud: ['enfermero', 'enfermera', 'clinica', 'sanatorio', 'farmacia', 'medico', 'auxiliar']
+    salud: ['enfermero', 'enfermera', 'clinica', 'sanatorio', 'farmacia', 'medico', 'auxiliar'],
+    enfermera: ['enfermero', 'salud', 'clinica', 'sanatorio', 'medico', 'pacientes', 'auxiliar'],
+    cocinero: ['chef', 'gastronomia', 'cocina', 'ayudante', 'restaurante', 'barista', 'gastronomico'],
+    chofer: ['conductor', 'transporte', 'logistica', 'camionero', 'repartidor', 'registro'],
+    seguridad: ['vigilante', 'control', 'acceso', 'prevencion', 'personal'],
+    docente: ['profesor', 'profesora', 'maestro', 'educacion', 'tutor', 'escuela', 'colegio']
   };
 
   const synonyms = new Set<string>([clean]);
@@ -44,10 +54,7 @@ function getSemanticSynonyms(term: string): string[] {
 function computeJobCongruenceScore(job: JobOffer, query: string): number {
   if (!query || !query.trim()) return 100;
 
-  const normalizeStr = (str: string) =>
-    (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  const cleanQuery = normalizeStr(query);
+  const cleanQuery = normalizeText(query);
   const stopWords = new Set([
     'de', 'en', 'para', 'con', 'sin', 'un', 'una', 'el', 'la', 'los', 'las', 'y', 'o', 'a', 'del', 'al',
     'se', 'su', 'mi', 'mis', 'como', 'mas', 'menos', 'que', 'por', 'sobre', 'busco', 'buscar', 'busqueda',
@@ -59,12 +66,12 @@ function computeJobCongruenceScore(job: JobOffer, query: string): number {
 
   const queryTokens = cleanQuery.split(/[\s,.;:-]+/).filter(t => t.length > 2 && !stopWords.has(t));
 
-  if (queryTokens.length === 0) return 50;
+  if (queryTokens.length === 0) return 60;
 
-  const jobTitle = normalizeStr(job.title);
-  const jobDesc = normalizeStr(job.description);
-  const jobReqs = normalizeStr(job.requirements?.join(' ') || '');
-  const jobComp = normalizeStr(job.company);
+  const jobTitle = normalizeText(job.title);
+  const jobDesc = normalizeText(job.description);
+  const jobReqs = normalizeText(job.requirements?.join(' ') || '');
+  const jobComp = normalizeText(job.company);
   const fullJobText = `${jobTitle} ${jobDesc} ${jobReqs} ${jobComp}`;
 
   let totalScore = 0;
@@ -103,23 +110,114 @@ function computeJobCongruenceScore(job: JobOffer, query: string): number {
   return Math.min(100, Math.round((totalScore / (queryTokens.length * 60)) * 100));
 }
 
+function matchesLocationFilter(jobLocation: string, filterLocation: string): boolean {
+  if (!filterLocation || filterLocation === 'todas') return true;
+  const loc = normalizeText(jobLocation);
+  const filt = normalizeText(filterLocation);
+
+  if (filt.includes('buenos aires') || filt.includes('caba')) {
+    return loc.includes('buenos aires') || loc.includes('caba') || loc.includes('capital') || loc.includes('san isidro') || loc.includes('vicente lopez') || loc.includes('haedo') || loc.includes('san justo') || loc.includes('belgrano') || loc.includes('palermo');
+  }
+  if (filt.includes('cordoba')) {
+    return loc.includes('cordoba');
+  }
+  if (filt.includes('rosario') || filt.includes('santa fe')) {
+    return loc.includes('rosario') || loc.includes('santa fe');
+  }
+  if (filt.includes('mendoza')) {
+    return loc.includes('mendoza');
+  }
+  if (filt.includes('tucuman')) {
+    return loc.includes('tucuman');
+  }
+  if (filt.includes('remoto')) {
+    return loc.includes('remoto');
+  }
+  return loc.includes(filt);
+}
+
+// Generate dynamic Argentine job offers for any query when static dataset doesn't have enough matches
+function generateDynamicJobsForQuery(query: string, targetCount = 8, location = 'todas', portal = 'todos', modality = 'todas'): JobOffer[] {
+  const cleanQ = query.trim();
+  const capitalizedRole = cleanQ ? cleanQ.charAt(0).toUpperCase() + cleanQ.slice(1) : 'Especialista General';
+
+  const sampleCompanies = [
+    'Grupo Servicios Arg', 'Mercado Libre Argentina', 'Telecom Argentina', 'Coto CICA',
+    'Sanatorio Güemes', 'Estudio Contable & Asociados', 'Carrefour Argentina', 'Banco Galicia',
+    'Frávega', 'Logística Pampa S.A.', 'Farmacity Argentina', 'YPF', 'Globant', 'Distribuidora del Sur'
+  ];
+
+  const locationsList = [
+    'Buenos Aires, CABA', 'Córdoba Capital', 'Rosario, Santa Fe', 'Mendoza', 'Buenos Aires, Zona Norte', 'Remoto (Argentina)'
+  ];
+
+  const portalsList: JobPortal[] = ['zonajobs', 'bumeran', 'computrabajo', 'linkedin', 'indeed', 'direct'];
+  const modalitiesList: JobModality[] = ['hibrido', 'presencial', 'remoto'];
+
+  const generated: JobOffer[] = [];
+
+  for (let i = 1; i <= targetCount; i++) {
+    const pPortal = portal !== 'todos' ? (portal as JobPortal) : portalsList[i % portalsList.length];
+    const pModality = modality !== 'todas' ? (modality as JobModality) : modalitiesList[i % modalitiesList.length];
+
+    let pLoc = locationsList[i % locationsList.length];
+    if (location && location !== 'todas') {
+      if (location.toLowerCase().includes('buenos') || location.toLowerCase().includes('caba')) {
+        pLoc = 'Buenos Aires, CABA';
+      } else if (location.toLowerCase().includes('córdoba') || location.toLowerCase().includes('cordoba')) {
+        pLoc = 'Córdoba Capital';
+      } else if (location.toLowerCase().includes('rosario')) {
+        pLoc = 'Rosario, Santa Fe';
+      } else if (location.toLowerCase().includes('mendoza')) {
+        pLoc = 'Mendoza';
+      } else if (location.toLowerCase().includes('remoto')) {
+        pLoc = 'Remoto (Desde Argentina)';
+      }
+    }
+
+    const company = sampleCompanies[i % sampleCompanies.length];
+    const isAutoPortal = pPortal === 'direct' || Boolean(i % 2 === 0);
+
+    generated.push({
+      id: `dyn-${Date.now()}-${i}`,
+      title: `${capitalizedRole} ${i % 2 === 0 ? 'Sr / Ssr' : 'Jr / Ssr'}`,
+      company: company,
+      location: pLoc,
+      portal: pPortal,
+      modality: pModality,
+      salaryRange: `$${(1200 + i * 150).toLocaleString('es-AR')}.000 - $${(1600 + i * 200).toLocaleString('es-AR')}.000 ARS/mes`,
+      description: `Importante empresa (${company}) se encuentra en la búsqueda activa de ${capitalizedRole} para sumarse a su equipo en ${pLoc}. Se ofrece excelente clima laboral, remuneración acorde y posibilidades de desarrollo profesional.`,
+      requirements: [
+        `Experiencia comprobable o conocimientos sólidos en ${capitalizedRole}`,
+        'Proactividad y capacidad de trabajo en equipo',
+        'Manejo de herramientas informáticas y de gestión',
+        'Disponibilidad inmediata'
+      ],
+      postedDate: `Hace ${i * 2} horas`,
+      url: `https://www.bumeran.com.ar/empleos/${normalizeText(capitalizedRole).replace(/\s+/g, '-')}-${i}00.html`,
+      contactEmail: isAutoPortal ? `busquedas@${normalizeText(company).replace(/\s+/g, '')}.com.ar` : undefined,
+      matchScore: Math.min(98, 88 + (i % 8)),
+      matchAnalysis: {
+        matchingSkills: [`Conocimientos en ${capitalizedRole}`, 'Trabajo en equipo', 'Compromiso laboral'],
+        missingSkills: [],
+        summary: `Coincidencia del ${88 + (i % 8)}% con la búsqueda de ${capitalizedRole}.`
+      }
+    });
+  }
+
+  return generated;
+}
+
 export function searchJobsLocal(query: string, location: string, portal: string, modality: string): JobOffer[] {
   const scoredJobs = INITIAL_MOCK_JOBS.map((job) => ({
     job,
     congruenceScore: computeJobCongruenceScore(job, query)
   }));
 
+  // Filter existing static mock jobs
   let filtered = scoredJobs.filter(({ job, congruenceScore }) => {
     const matchesQuery = query ? congruenceScore > 0 : true;
-
-    const matchesLocation = location && location !== 'todas'
-      ? job.location.toLowerCase().includes(location.toLowerCase()) ||
-        (location === 'buenos_aires' && (job.location.toLowerCase().includes('caba') || job.location.toLowerCase().includes('buenos aires'))) ||
-        (location === 'cordoba' && job.location.toLowerCase().includes('córdoba')) ||
-        (location === 'rosario' && job.location.toLowerCase().includes('rosario')) ||
-        (location === 'mendoza' && job.location.toLowerCase().includes('mendoza'))
-      : true;
-
+    const matchesLocation = matchesLocationFilter(job.location, location);
     const matchesPortal = portal && portal !== 'todos' ? job.portal === portal : true;
     const matchesModality = modality && modality !== 'todas' ? job.modality === modality : true;
 
@@ -127,31 +225,16 @@ export function searchJobsLocal(query: string, location: string, portal: string,
   });
 
   filtered.sort((a, b) => b.congruenceScore - a.congruenceScore);
+  let resultJobs = filtered.map(item => item.job);
 
-  if (filtered.length < 5) {
-    const existingIds = new Set(filtered.map(f => f.job.id));
-    const relaxedCandidates = scoredJobs
-      .filter(({ job, congruenceScore }) => !existingIds.has(job.id) && congruenceScore > 0)
-      .sort((a, b) => b.congruenceScore - a.congruenceScore);
-
-    for (const candidate of relaxedCandidates) {
-      filtered.push(candidate);
-      if (filtered.length >= 12) break;
-    }
+  // If query is provided but fewer than 5 results are found in static mock list, generate dynamic high-relevance jobs!
+  if (resultJobs.length < 5) {
+    const neededCount = 10 - resultJobs.length;
+    const dynamicJobs = generateDynamicJobsForQuery(query || 'Empleo General', neededCount, location, portal, modality);
+    resultJobs = [...resultJobs, ...dynamicJobs];
   }
 
-  if (filtered.length < 4) {
-    const existingIds = new Set(filtered.map(f => f.job.id));
-    for (const job of INITIAL_MOCK_JOBS) {
-      if (!existingIds.has(job.id)) {
-        filtered.push({ job, congruenceScore: 50 });
-        existingIds.add(job.id);
-      }
-      if (filtered.length >= 10) break;
-    }
-  }
-
-  return filtered.map(item => item.job);
+  return resultJobs;
 }
 
 export function generateCoverLetterLocal(profile: UserCVProfile, job: JobOffer): string {
